@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Gloock&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --color-brand-purple: #835BAF;
+  --color-brand-pink: #DE517D;
+  --color-brand-blue: #60A5FA;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Site header */
+:root {
+  --site-header-height: 4.75rem;
+}
+
+.site-header-gradient {
+  background: linear-gradient(
+    90deg,
+    #ff1b8d 0%,
+    #e82892 14%,
+    #c9338f 28%,
+    #a52b87 44%,
+    #8b2282 58%,
+    #6f2479 74%,
+    #4c1d6f 100%
+  );
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+  position: relative;
+}
+
+/* Base body */
+body {
+  background: #ffffff;
+  color: #171717;
+  font-family: "Inter", system-ui, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.footer-brand-script {
+  font-family: "Script MT", "Script MT Bold", cursive;
+}
+
+.brand-script {
+  font-family: "Script MT", "Script MT Bold", "Brush Script MT", cursive;
+}
+
+.font-hero {
+  font-family: var(--font-sora), sans-serif !important;
+}
+
+.font-body-soft {
+  font-family: var(--font-manrope), sans-serif !important;
+}
+
+.footer-brand-script {
+  font-family: "Script MT", "Script MT Bold", "Brush Script MT", cursive;
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(to right, #835BAF, #DE517D);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #835BAF, #DE517D);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #835BAF;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Counter animation */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gradient shift animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* Newspaper font utility — closest free match to Egyptienne Bold Condensed */
+.font-newspaper {
+  font-family: 'Alfa Slab One', 'Rockwell Extra Bold', 'Memphis Extra Bold', Georgia, serif;
+  font-weight: 400; /* Alfa Slab One is inherently extra bold */
+  letter-spacing: -0.01em;
+}
+
+.font-news-headline {
+  font-family: 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+  font-weight: 900;
+}

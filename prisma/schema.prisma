@@ -1,0 +1,788 @@
+// Prisma schema for Hostinger MySQL
+// Set DATABASE_URL in Hostinger / .env then run: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum CampaignStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum DonationFrequency {
+  ONE_TIME
+  MONTHLY
+}
+
+enum DonationStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum DedicationType {
+  NONE
+  IN_HONOUR
+  IN_MEMORY
+}
+
+enum ReceiptStatus {
+  NOT_REQUIRED
+  PENDING
+  GENERATED
+  EMAILED
+  CANCELLED
+  FAILED
+}
+
+enum ReceiptType {
+  OFFICIAL
+  ACKNOWLEDGEMENT
+  REPLACEMENT
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum SyncStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+model Donor {
+  id                  String     @id @default(cuid())
+  zeffyContactId      String?    @unique
+  email               String
+  firstName           String?
+  lastName            String?
+  phone               String?
+  addressLine1        String?
+  addressLine2        String?
+  city                String?
+  province            String?
+  postalCode          String?
+  country             String     @default("CA")
+  anonymousPreference Boolean    @default(false)
+  marketingConsent    Boolean    @default(false)
+  consentTimestamp    DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  donations           Donation[]
+
+  @@index([email])
+}
+
+model Campaign {
+  id                String         @id @default(cuid())
+  zeffyCampaignId   String?        @unique
+  slug              String         @unique
+  name              String
+  description       String?        @db.Text
+  embedUrl          String?        @db.Text
+  goalAmountCents   Int?
+  raisedAmountCents Int            @default(0)
+  currency          String         @default("CAD")
+  status            CampaignStatus @default(ACTIVE)
+  startDate         DateTime?
+  endDate           DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  donations         Donation[]
+}
+
+model Donation {
+  id                         String            @id @default(cuid())
+  localReference             String?           @unique
+  zeffyTransactionId         String?           @unique
+  zeffyPaymentId             String?           @unique
+  donorId                    String?
+  campaignId                 String?
+  amountCents                Int
+  eligibleReceiptAmountCents Int               @default(0)
+  currency                   String            @default("CAD")
+  frequency                  DonationFrequency
+  status                     DonationStatus
+  paymentProvider            String            @default("ZEFFY")
+  isAnonymous                Boolean           @default(false)
+  isEligibleGift             Boolean           @default(true)
+  dedicationType             DedicationType?
+  dedicationName             String?
+  donorMessage               String?           @db.Text
+  transactionDate            DateTime?
+  receiptRequired            Boolean           @default(false)
+  receiptStatus              ReceiptStatus     @default(NOT_REQUIRED)
+  receiptId                  String?
+  confirmationEmailStatus    EmailStatus       @default(PENDING)
+  rawProviderMetadata        Json?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  donor                      Donor?            @relation(fields: [donorId], references: [id])
+  campaign                   Campaign?         @relation(fields: [campaignId], references: [id])
+  receipt                    DonationReceipt?
+  syncEvents                 DonationSyncEvent[]
+
+  @@index([donorId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([transactionDate])
+  @@index([receiptStatus])
+}
+
+model DonationReceipt {
+  id                   String        @id @default(cuid())
+  donationId           String        @unique
+  receiptNumber        String        @unique
+  receiptType          ReceiptType
+  status               ReceiptStatus
+  issuedAt             DateTime?
+  emailedAt            DateTime?
+  cancelledAt          DateTime?
+  replacementReceiptId String?
+  pdfStorageKey        String?
+  checksum             String?
+  donorLegalName       String?
+  donorAddressSnapshot Json?
+  charitySnapshot      Json?
+  eligibleAmountCents  Int
+  currency             String        @default("CAD")
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  donation             Donation      @relation(fields: [donationId], references: [id])
+}
+
+model RecurringDonation {
+  id                    String    @id @default(cuid())
+  zeffyRecurringId      String?   @unique
+  donorId               String
+  campaignId            String?
+  amountCents           Int
+  currency              String    @default("CAD")
+  frequency             String    @default("MONTHLY")
+  status                String
+  startedAt             DateTime
+  nextExpectedPaymentAt DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model DonationSyncEvent {
+  id              String     @id @default(cuid())
+  donationId      String?
+  provider        String     @default("ZEFFY")
+  providerEventId String?    @unique
+  eventType       String
+  status          SyncStatus
+  payloadHash     String?
+  processedAt     DateTime?
+  failureReason   String?    @db.Text
+  attemptCount    Int        @default(0)
+  createdAt       DateTime   @default(now())
+  donation        Donation?  @relation(fields: [donationId], references: [id])
+}
+
+model AuditLog {
+  id              String     @id @default(cuid())
+  administratorId String?
+  action          String
+  entityType      String
+  entityId        String?
+  previousData    Json?
+  newData         Json?
+  ipAddress       String?
+  userAgent       String?    @db.Text
+  createdAt       DateTime   @default(now())
+  administrator   AdminUser? @relation("AdminAuditLogs", fields: [administratorId], references: [id])
+
+  @@index([administratorId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model ReceiptSequence {
+  id        String   @id @default(cuid())
+  year      Int      @unique
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// ——— Counselling / Book Now ———
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED_BY_CLIENT
+  CANCELLED_BY_ADMIN
+  CANCELLED_BY_COUNSELLOR
+  CONSENT_OVERDUE
+}
+
+enum AppointmentMode {
+  VIRTUAL
+  PHONE
+  IN_PERSON
+}
+
+enum ContactMethod {
+  EMAIL
+  PHONE
+  SMS
+}
+
+enum ConsentStatus {
+  NOT_SENT
+  SENT
+  VIEWED
+  SIGNED
+  OVERDUE
+  REVOKED
+}
+
+enum SignatureMethod {
+  DRAWN
+  TYPED
+  DRAWN_AND_TYPED
+}
+
+enum TemplateStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+enum AvailabilityOverrideType {
+  BLOCK
+  OPEN
+  VACATION
+  HOLIDAY
+  SICK
+  EMERGENCY
+}
+
+enum ReminderType {
+  BOOKING_CONFIRMATION
+  APPOINTMENT_48H
+  APPOINTMENT_24H
+  APPOINTMENT_2H
+  CONSENT_IMMEDIATE
+  CONSENT_72H
+  CONSENT_48H
+  CONSENT_24H
+  CONSENT_DEADLINE
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+  CANCELLED
+}
+
+enum ActorType {
+  CLIENT
+  ADMIN
+  COUNSELLOR
+  SYSTEM
+  GOOGLE
+}
+
+enum GoogleSyncStatus {
+  NOT_SYNCED
+  PENDING
+  SYNCED
+  SYNC_FAILED
+  CANCELLED
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  COUNSELLOR_ADMIN
+  READ_ONLY
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  REVOKED
+  ERROR
+}
+
+enum IntegrationProvider {
+  GOOGLE_CALENDAR
+}
+
+model Counsellor {
+  id                     String                 @id @default(cuid())
+  displayName            String
+  email                  String                 @unique
+  phone                  String?
+  googleCalendarId       String?
+  googleWorkspaceUser    String?
+  timeZone               String                 @default("America/Toronto")
+  active                 Boolean                @default(true)
+  defaultDurationMinutes Int                    @default(60)
+  bufferBeforeMinutes    Int                    @default(0)
+  bufferAfterMinutes     Int                    @default(15)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  appointments           Appointment[]
+  availabilityRules      AvailabilityRule[]
+  availabilityOverrides  AvailabilityOverride[]
+}
+
+model CounsellingClient {
+  id                        String        @id @default(cuid())
+  firstName                 String
+  lastName                  String
+  email                     String
+  phone                     String
+  preferredContactMethod    ContactMethod?
+  preferredLanguage         String?
+  safeToLeaveVoicemail      Boolean       @default(false)
+  safeToSendEmail           Boolean       @default(true)
+  accessibilityRequirements String?       @db.Text
+  emergencyContactName      String?
+  emergencyContactPhone     String?
+  emergencyRelationship     String?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  appointments              Appointment[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+model CounsellingService {
+  id                   String          @id @default(cuid())
+  name                 String
+  slug                 String          @unique
+  description          String?         @db.Text
+  durationMinutes      Int             @default(60)
+  bufferBeforeMinutes  Int             @default(0)
+  bufferAfterMinutes   Int             @default(15)
+  appointmentMode      AppointmentMode @default(VIRTUAL)
+  requiresConsent      Boolean         @default(true)
+  consentDeadlineHours Int             @default(24)
+  active               Boolean         @default(true)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  appointments         Appointment[]
+}
+
+model Appointment {
+  id                      String                @id @default(cuid())
+  referenceNumber         String                @unique
+  clientId                String
+  counsellorId            String
+  serviceId               String
+  startTimeUtc            DateTime
+  endTimeUtc              DateTime
+  timeZone                String                @default("America/Toronto")
+  status                  AppointmentStatus     @default(PENDING)
+  appointmentMode         AppointmentMode
+  location                String?
+  googleCalendarEventId   String?               @unique
+  googleCalendarId        String?
+  googleMeetUrl           String?
+  googleEventHtmlLink     String?               @db.Text
+  googleSyncStatus        GoogleSyncStatus      @default(NOT_SYNCED)
+  googleSyncError         String?               @db.Text
+  googleSyncedAt          DateTime?
+  clientNotes             String?               @db.Text
+  intakeAnswers           Json?
+  cancellationReason      String?
+  cancelledBy             ActorType?
+  cancelledAt             DateTime?
+  completedAt             DateTime?
+  noShowAt                DateTime?
+  consentStatus           ConsentStatus         @default(NOT_SENT)
+  confirmationEmailStatus DeliveryStatus        @default(PENDING)
+  manageTokenHash         String?
+  consentTokenHash        String?
+  rescheduleCount         Int                   @default(0)
+  idempotencyKey          String?               @unique
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  client                  CounsellingClient     @relation(fields: [clientId], references: [id])
+  counsellor              Counsellor            @relation(fields: [counsellorId], references: [id])
+  service                 CounsellingService    @relation(fields: [serviceId], references: [id])
+  signedConsent           SignedConsent?
+  reminders               AppointmentReminder[]
+  auditEvents             AppointmentAuditEvent[]
+
+  @@index([counsellorId, startTimeUtc, endTimeUtc])
+  @@index([clientId])
+  @@index([status])
+  @@index([consentStatus])
+  @@index([manageTokenHash])
+  @@index([consentTokenHash])
+}
+
+model AvailabilityRule {
+  id                       String     @id @default(cuid())
+  counsellorId             String
+  weekday                  Int
+  startMinutesFromMidnight Int
+  endMinutesFromMidnight   Int
+  effectiveFrom            DateTime?
+  effectiveUntil           DateTime?
+  active                   Boolean    @default(true)
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+  counsellor               Counsellor @relation(fields: [counsellorId], references: [id])
+
+  @@index([counsellorId, weekday])
+}
+
+model AvailabilityOverride {
+  id           String                   @id @default(cuid())
+  counsellorId String
+  startTimeUtc DateTime
+  endTimeUtc   DateTime
+  type         AvailabilityOverrideType
+  reason       String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  counsellor   Counsellor               @relation(fields: [counsellorId], references: [id])
+
+  @@index([counsellorId, startTimeUtc, endTimeUtc])
+}
+
+model AppointmentHold {
+  id           String   @id @default(cuid())
+  counsellorId String
+  startTimeUtc DateTime
+  endTimeUtc   DateTime
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  convertedAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([counsellorId, startTimeUtc, endTimeUtc])
+  @@index([expiresAt])
+}
+
+model ConsentTemplate {
+  id                String          @id @default(cuid())
+  title             String
+  version           String
+  status            TemplateStatus  @default(DRAFT)
+  originalFileName  String?
+  googleDriveFileId String?
+  storageKey        String?
+  documentHash      String
+  bodyText          String?         @db.Text
+  effectiveAt       DateTime
+  retiredAt         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  signedConsents    SignedConsent[]
+
+  @@unique([title, version])
+}
+
+model SignedConsent {
+  id                   String              @id @default(cuid())
+  appointmentId        String              @unique
+  consentTemplateId    String
+  status               ConsentStatus
+  clientLegalName      String
+  clientEmail          String
+  signatureMethod      SignatureMethod
+  signatureStorageKey  String?
+  signingSessionId     String              @unique
+  signedAtUtc          DateTime
+  sourceIp             String?
+  userAgent            String?             @db.Text
+  originalDocumentHash String
+  finalDocumentHash    String              @unique
+  certificateText      String?             @db.Text
+  acknowledgements     Json?
+  artifactStatus       String              @default("LOCAL_PENDING")
+  googleDriveFileId    String?             @unique
+  googleDriveFolderId  String?
+  finalFileName        String?
+  fileSizeBytes        Int?
+  uploadedAt           DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  appointment          Appointment         @relation(fields: [appointmentId], references: [id])
+  consentTemplate      ConsentTemplate     @relation(fields: [consentTemplateId], references: [id])
+  auditEvents          ConsentAuditEvent[]
+}
+
+model AppointmentReminder {
+  id                String         @id @default(cuid())
+  appointmentId     String
+  type              ReminderType
+  scheduledForUtc   DateTime
+  status            DeliveryStatus @default(PENDING)
+  providerMessageId String?
+  sentAt            DateTime?
+  failureReason     String?        @db.Text
+  attemptCount      Int            @default(0)
+  createdAt         DateTime       @default(now())
+  appointment       Appointment    @relation(fields: [appointmentId], references: [id])
+
+  @@index([scheduledForUtc, status])
+}
+
+model AppointmentAuditEvent {
+  id            String       @id @default(cuid())
+  appointmentId String?
+  actorType     ActorType
+  actorId       String?
+  action        String
+  previousData  Json?
+  newData       Json?
+  ipAddress     String?
+  userAgent     String?      @db.Text
+  createdAt     DateTime     @default(now())
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId, createdAt])
+  @@index([createdAt])
+}
+
+model ConsentAuditEvent {
+  id              String        @id @default(cuid())
+  signedConsentId String
+  action          String
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  signedConsent   SignedConsent @relation(fields: [signedConsentId], references: [id])
+
+  @@index([signedConsentId, createdAt])
+}
+
+model BookingSettings {
+  id                           String   @id @default("default")
+  timeZone                     String   @default("America/Toronto")
+  durationMinutes              Int      @default(60)
+  bufferBeforeMinutes          Int      @default(0)
+  bufferAfterMinutes           Int      @default(15)
+  minimumNoticeHours           Int      @default(24)
+  maximumWindowDays            Int      @default(60)
+  holdMinutes                  Int      @default(10)
+  consentDeadlineHours         Int      @default(24)
+  consentRequiredBeforeConfirm Boolean  @default(false)
+  googleMeetEnabled            Boolean  @default(true)
+  maxAppointmentsPerDay        Int      @default(8)
+  inPersonLocation             String   @default("93 Broadview Ave., Toronto (confirm with staff)")
+  crisisMessage                String   @db.Text
+  updatedAt                    DateTime @updatedAt
+}
+
+model AppointmentSequence {
+  id        String   @id @default(cuid())
+  year      Int      @unique
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// ——— Admin authentication ———
+
+model AdminUser {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  displayName  String
+  passwordHash String
+  role         AdminRole      @default(ADMIN)
+  active       Boolean        @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+  integrations GoogleCalendarIntegration[]
+  auditLogs    AuditLog[]     @relation("AdminAuditLogs")
+  eventsCreated Event[]       @relation("EventCreatedBy")
+  eventsUpdated Event[]       @relation("EventUpdatedBy")
+
+  @@index([role, active])
+}
+
+model AdminSession {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?   @db.Text
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model GoogleCalendarIntegration {
+  id                    String              @id @default(cuid())
+  provider              IntegrationProvider @default(GOOGLE_CALENDAR)
+  encryptedRefreshToken String              @db.Text
+  connectedEmail        String?
+  calendarId            String?
+  calendarName          String?
+  connectedByUserId     String?
+  connectedAt           DateTime            @default(now())
+  revokedAt             DateTime?
+  status                IntegrationStatus   @default(CONNECTED)
+  lastSuccessfulCheckAt DateTime?
+  lastError             String?             @db.Text
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  connectedBy           AdminUser?          @relation(fields: [connectedByUserId], references: [id])
+
+  @@index([provider, status])
+}
+
+model GoogleOAuthState {
+  id        String   @id @default(cuid())
+  state     String   @unique
+  adminId   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// ——— Public events CMS ———
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventLocationType {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+enum EventRegistrationType {
+  LEARN_MORE
+  EXTERNAL_REGISTRATION
+  INTERNAL_REGISTRATION
+  NO_REGISTRATION
+}
+
+enum EventRegistrationStatus {
+  REGISTERED
+  CANCELLED
+  WAITLISTED
+}
+
+model Event {
+  id        String @id @default(cuid())
+  title     String
+  slug      String @unique
+
+  shortDescription String  @db.VarChar(500)
+  description      String? @db.Text
+
+  status        EventStatus @default(DRAFT)
+  eventCategory String?
+
+  startDateTime DateTime
+  endDateTime   DateTime?
+  timezone      String    @default("America/Toronto")
+
+  locationType   EventLocationType
+  venueName      String?
+  addressLine    String?
+  city           String?
+  province       String?
+  postalCode     String?
+  onlinePlatform String?
+  onlineUrl      String? @db.Text
+
+  coverImageUrl String? @db.Text
+  coverImageAlt String?
+
+  registrationType     EventRegistrationType @default(LEARN_MORE)
+  registrationUrl      String?               @db.Text
+  registrationDeadline DateTime?
+  capacity             Int?
+  ctaLabel             String?
+
+  impactSummary   String? @db.Text
+  attendeesCount  Int?
+  volunteersCount Int?
+  volunteerHours  Int?
+  activitiesCount Int?
+  peopleReached   Int?
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdByAdminId String?
+  updatedByAdminId String?
+  createdBy        AdminUser? @relation("EventCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  updatedBy        AdminUser? @relation("EventUpdatedBy", fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+
+  media          EventMedia[]
+  highlights     EventHighlight[]
+  registrations  EventRegistration[]
+
+  @@index([status, startDateTime])
+  @@index([startDateTime])
+  @@index([publishedAt])
+  @@index([status])
+}
+
+model EventHighlight {
+  id        String @id @default(cuid())
+  eventId   String
+  text      String @db.Text
+  sortOrder Int    @default(0)
+  event     Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, sortOrder])
+}
+
+model EventMedia {
+  id        String  @id @default(cuid())
+  eventId   String
+  url       String  @db.Text
+  altText   String?
+  sortOrder Int     @default(0)
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, sortOrder])
+}
+
+model EventRegistration {
+  id        String                  @id @default(cuid())
+  eventId   String
+  fullName  String
+  email     String
+  phone     String?
+  status    EventRegistrationStatus @default(REGISTERED)
+  createdAt DateTime                @default(now())
+  event     Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, email])
+  @@index([eventId, status])
+  @@index([email])
+}

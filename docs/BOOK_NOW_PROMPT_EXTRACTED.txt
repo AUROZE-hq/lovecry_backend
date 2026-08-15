@@ -1,0 +1,1517 @@
+MASTER DEVELOPMENT PROMPT — LOVECRY COUNSELLING BOOKING, CONSENT AND GOOGLE WORKSPACE SYSTEM
+You are a senior full-stack software architect, security engineer and product developer.
+Build a complete, production-ready Book Now and counselling appointment management system for LoveCry.
+Website:
+https://www.lovecry.ca
+The entire client-facing experience must remain inside the LoveCry website. Clients must not be redirected to Google Calendar, Google Forms, Google Drive, Calendly or another external booking website.
+The system must integrate with LoveCry’s Google Workspace for Nonprofits account and use:
+Google Calendar for counsellor appointment scheduling.
+Google Drive for storing finalized signed consent forms.
+Gmail or a transactional email provider for confirmations and reminders.
+Google Meet optionally for virtual counselling sessions.
+LoveCry’s existing admin portal for availability and appointment management.
+The organization currently has one counsellor, but the architecture must support adding multiple counsellors later.
+1. PRIMARY OBJECTIVE
+Build a system that allows a client to:
+Click Book Now on LoveCry.ca.
+Select an available counselling date.
+Select an available one-hour time slot.
+Enter their contact details.
+Answer required intake questions.
+Review a counselling consent form.
+Electronically sign the consent form inside the website.
+Submit the booking.
+Receive booking confirmation by email.
+Receive optional SMS confirmation if SMS is enabled.
+Add the appointment to their personal calendar.
+Reschedule using a secure link.
+Cancel using a secure link.
+Receive reminders before the appointment.
+Receive reminders when the consent form has not been signed.
+The counsellor must receive the appointment automatically in their Google Calendar and be able to manage it from the Google Calendar mobile application.
+Administrators must be able to:
+Set counsellor availability.
+Block unavailable dates and times.
+Set holidays, breaks and vacation periods.
+Define appointment duration.
+Define buffer periods.
+View all appointments.
+View client contact details.
+View consent-signing status.
+View and download signed consent forms.
+Cancel appointments.
+Reschedule appointments.
+mark appointments completed.
+Mark appointments as no-show.
+Contact clients.
+Resend confirmations.
+Resend consent reminders.
+Send custom messages.
+View booking and consent audit history.
+2. CORE TECHNOLOGY STACK
+Use the existing LoveCry technology stack when possible.
+If no established stack exists, use:
+Frontend
+Next.js 15 or current stable version.
+React.
+TypeScript.
+Tailwind CSS.
+shadcn/ui.
+React Hook Form.
+Zod.
+Accessible calendar and time-slot components.
+Signature pad based on HTML Canvas or SVG.
+Mobile-first responsive design.
+Backend
+Next.js Route Handlers or a separate Node.js backend.
+TypeScript.
+PostgreSQL.
+Prisma ORM.
+Redis.
+BullMQ or equivalent job queue.
+REST APIs.
+Background workers for reminders, PDF generation and Google synchronization.
+Google integration
+Google Calendar API.
+Google Drive API.
+Gmail API or an approved transactional email service.
+Google Meet conference creation through Calendar events.
+Google Workspace OAuth 2.0.
+Service account with domain-wide delegation only when required and approved by the Google Workspace administrator.
+Storage
+Google Drive for finalized signed consent PDFs.
+PostgreSQL for booking metadata, client records, consent status and Drive file IDs.
+Do not use Google Drive as the primary relational database.
+Monitoring
+Sentry.
+Structured server logs.
+Background-job monitoring.
+Google API error monitoring.
+Security and audit logs.
+3. HIGH-LEVEL ARCHITECTURE
+Use this flow:
+Client visits LoveCry.ca/book-now
+↓
+Website requests available time slots
+↓
+Backend checks:
+- Admin availability rules
+- Existing LoveCry bookings
+- Counsellor Google Calendar busy periods
+- Buffers and blocked dates
+↓
+Client selects one-hour slot
+↓
+System temporarily holds slot
+↓
+Client enters personal and contact details
+↓
+Client reviews consent form
+↓
+Client signs electronically
+↓
+Backend validates signature and consent
+↓
+Booking created in PostgreSQL
+↓
+Google Calendar event created
+↓
+Optional Google Meet link created
+↓
+Signed consent PDF generated
+↓
+PDF uploaded to restricted Google Drive folder
+↓
+Booking confirmation sent to client
+↓
+Counsellor receives Google Calendar event and reminder
+↓
+Admin dashboard displays appointment and consent status
+The database is the application system of record.
+Google Calendar is the scheduling integration and counsellor-facing calendar.
+Google Drive is the signed-document storage location.
+4. BOOKING PAGE
+Create:
+/app/book-now/page.tsx
+The Book Now flow must remain inside LoveCry.ca.
+Use a step-by-step interface.
+Step 1 — Service selection
+For the initial release, include:
+Individual counselling session.
+Duration: 60 minutes.
+Architecture must support adding other services later, such as:
+Initial consultation.
+Follow-up counselling.
+Family counselling.
+Group counselling.
+Virtual counselling.
+In-person counselling.
+Step 2 — Appointment format
+Allow the administrator to enable:
+Virtual appointment.
+Phone appointment.
+In-person appointment.
+For virtual appointments, optionally generate a Google Meet link.
+For phone appointments, collect the client’s preferred telephone number.
+For in-person appointments, display the approved LoveCry location.
+Step 3 — Date selection
+Display only dates with valid availability.
+Do not display unavailable dates as selectable.
+Administrators must control:
+Available weekdays.
+Start and end time.
+Appointment duration.
+Buffer before appointments.
+Buffer after appointments.
+Maximum bookings per day.
+Minimum advance-booking notice.
+Maximum future booking window.
+Blackout dates.
+Vacation periods.
+Holidays.
+One-time availability overrides.
+Default settings:
+Duration: 60 minutes
+Minimum booking notice: 24 hours
+Maximum booking window: 60 days
+Buffer before appointment: 0 minutes
+Buffer after appointment: 15 minutes
+Time zone: America/Toronto
+These values must be editable in the admin portal.
+Step 4 — Time selection
+Show available one-hour slots.
+Example:
+9:00 AM
+10:15 AM
+11:30 AM
+1:30 PM
+2:45 PM
+4:00 PM
+Time slots must account for:
+Counsellor availability.
+Existing internal bookings.
+Existing Google Calendar events.
+Appointment duration.
+Buffers.
+Blocked periods.
+Temporary booking holds.
+Time-zone conversion.
+Do not permit double booking.
+When a client selects a slot, create a temporary hold for approximately 10 minutes.
+If the client does not complete booking, release the hold automatically.
+Step 5 — Client details
+Collect:
+First name.
+Last name.
+Email address.
+Mobile telephone number.
+Preferred contact method.
+Date of birth, only when necessary.
+Address, only when necessary.
+Emergency contact name.
+Emergency contact telephone number.
+Relationship to emergency contact.
+Preferred language.
+Accessibility requirements.
+Appointment notes.
+Referral source.
+Whether this is their first session.
+Do not collect unnecessary health information during the basic booking process.
+Mark optional and required fields clearly.
+Validate email and telephone number.
+Step 6 — Intake and safety notice
+Include configurable intake questions.
+Examples:
+What would you like support with?
+Is this your first counselling session with LoveCry?
+Do you require an interpreter?
+Are there accessibility accommodations we should know about?
+Is it safe for LoveCry to leave a voicemail?
+Is it safe for LoveCry to send email reminders?
+Display a clear crisis notice:
+“LoveCry’s online booking service is not an emergency or crisis service. If you are in immediate danger, call 911 or go to the nearest emergency department.”
+Do not attempt to provide automated clinical diagnosis or risk scoring.
+Step 7 — Consent form
+The client must review and sign the active consent form before the appointment is considered consent-complete.
+Support two booking policies:
+Policy A — Signature required before booking confirmation
+The client cannot finish booking until the form is signed.
+Policy B — Booking permitted before signature
+The appointment is reserved, but the client must sign before a configurable deadline.
+Default to Policy B if LoveCry wants to reduce booking abandonment.
+Suggested deadline:
+Consent must be signed at least 24 hours before the appointment.
+The administrator must be able to switch between policies.
+Step 8 — Confirmation
+Display:
+Appointment date.
+Appointment time.
+Time zone.
+Session duration.
+Appointment type.
+Counsellor name.
+Location or Google Meet instructions.
+Consent status.
+Confirmation number.
+Reschedule button.
+Cancel button.
+Add-to-calendar options.
+Contact information.
+Never expose sensitive client information in URL query parameters.
+5. ADMIN AVAILABILITY MANAGEMENT
+Create:
+/admin/counselling/availability
+Administrators must be able to configure recurring weekly availability.
+Example:
+Monday:    9:00 AM – 5:00 PM
+Tuesday:   9:00 AM – 5:00 PM
+Wednesday: Unavailable
+Thursday:  12:00 PM – 8:00 PM
+Friday:    9:00 AM – 3:00 PM
+Saturday:  Unavailable
+Sunday:    Unavailable
+Allow multiple windows per day:
+Monday:
+9:00 AM – 12:00 PM
+1:00 PM – 5:00 PM
+Support:
+Recurring weekly availability.
+Specific-date availability.
+Blocked times.
+Lunch breaks.
+Vacation.
+Sick leave.
+Holidays.
+Emergency closure.
+Maximum appointments per day.
+Minimum booking notice.
+Maximum booking horizon.
+Buffer before and after appointments.
+Slot interval.
+Appointment duration.
+Time-zone configuration.
+Create a preview calendar showing the exact slots clients will see.
+6. GOOGLE CALENDAR INTEGRATION
+Create a dedicated Google Calendar for counselling appointments.
+Suggested calendar name:
+LoveCry Counselling Appointments
+Do not use the counsellor’s unrelated personal calendar as the only calendar.
+The counsellor may subscribe to the counselling calendar using their Google Workspace account and view it in the Google Calendar mobile application.
+Create:
+/lib/google/auth.ts
+/lib/google/calendar.ts
+/lib/google/calendar-events.ts
+/lib/google/calendar-freebusy.ts
+/lib/google/calendar-watch.ts
+Required Google Calendar operations
+Implement:
+Check free/busy information.
+Create appointment event.
+Update appointment event.
+Cancel appointment event.
+Move appointment date or time.
+Add counsellor attendee.
+Add optional Google Meet conference.
+Configure calendar reminders.
+Store Google event ID.
+Handle events changed directly in Google Calendar.
+Handle events deleted directly in Google Calendar.
+Event title
+Do not expose sensitive counselling details in the event title.
+Use:
+Counselling Appointment — [Booking Reference]
+Do not use:
+Trauma Counselling for John Smith
+Event description
+Keep sensitive data minimal.
+Suggested description:
+LoveCry counselling appointment
+Booking reference: LC-APT-2026-000001
+Client: [Client Name]
+Phone: [Phone]
+Email: [Email]
+Appointment type: Virtual
+Consent status: Signed
+Manage appointment:
+[Secure admin URL]
+Only include client details when the counsellor has authorized access.
+Google Calendar reminders
+Default counsellor reminders:
+24 hours before.
+1 hour before.
+15 minutes before.
+Make reminders configurable.
+Google Meet
+If enabled:
+Create Google Meet conferencing when the event is created.
+Store the Meet URL securely.
+Include the Meet link in client confirmation.
+Include the Meet link in counsellor’s Calendar event.
+Do not create multiple Meet links when an event is updated.
+Remove access when the booking is cancelled if technically applicable.
+Two-way synchronization
+The counsellor may manage events from the Google Calendar mobile application.
+Implement synchronization for:
+Event time changed in Google Calendar.
+Event cancelled in Google Calendar.
+Event deleted in Google Calendar.
+Event restored.
+Counsellor response status changed.
+Use Google Calendar push notifications when available.
+Also run a scheduled reconciliation job as a fallback.
+When a counsellor changes the appointment time in Google Calendar:
+Detect the update.
+Validate that the new time complies with business rules.
+Update the internal booking.
+Notify the client.
+Update reminder jobs.
+Log the change.
+If the change creates a conflict, flag the appointment for admin review instead of silently overwriting another booking.
+7. CONSENT FORM TEMPLATE MANAGEMENT
+Create:
+/admin/counselling/consent-forms
+Administrators must be able to:
+Upload a PDF consent-form template.
+Enter a form title.
+Add a version number.
+Set an effective date.
+Add an expiry or retirement date.
+Preview the form.
+Activate a version.
+Deactivate a version.
+Download the original template.
+View how many appointments used each version.
+Only one consent-form version should normally be active for a particular counselling service at a time.
+Never overwrite an existing consent-form version.
+When a new version is uploaded:
+Preserve the previous version.
+Assign a new immutable version ID.
+Require newly created bookings to use the current active version.
+Preserve the exact version signed by existing clients.
+Supported upload type:
+PDF only
+Validate:
+MIME type.
+File signature.
+File size.
+Malware scan.
+Page count.
+Password protection.
+Corrupt PDF detection.
+Store the template in a restricted Google Drive folder or secure object storage.
+8. ELECTRONIC SIGNATURE WORKFLOW
+The client must sign inside LoveCry.ca.
+Do not redirect the client to Google Drive for the primary signing flow.
+Create:
+/components/consent/ConsentDocumentViewer.tsx
+/components/consent/SignaturePad.tsx
+/components/consent/TypedSignature.tsx
+/components/consent/ConsentCheckboxes.tsx
+/components/consent/SignatureConfirmation.tsx
+Signature methods
+Support:
+Drawn signature using mouse, stylus or touchscreen.
+Typed legal name.
+Required acknowledgement checkbox.
+Signature date and time.
+Optional initials where required.
+Require the client to confirm:
+I confirm that I have read and understood the consent form.
+I agree to participate in counselling services under the terms described in this form.
+I confirm that the electronic signature I provide is my signature and that I intend to sign this consent form electronically.
+Signature evidence
+Capture and preserve:
+Booking ID.
+Consent-template version ID.
+Client’s full typed legal name.
+Drawn signature image or signature vector data.
+Client email.
+Signature timestamp in UTC.
+Local displayed timestamp.
+IP address.
+User-agent information.
+Consent-checkbox values.
+Hash of the original PDF.
+Hash of the finalized signed PDF.
+Unique signing-session ID.
+Signature method.
+Document version.
+Audit events.
+Explicit intent-to-sign confirmation.
+Do not depend only on an image of a signature.
+The complete audit record is essential.
+Signing session
+Create a one-time signing token.
+Requirements:
+Cryptographically random.
+Hashed before database storage.
+Single use.
+Expires after a configurable period.
+Bound to a specific booking and consent version.
+Invalidated after successful signing.
+Invalidated when the booking is cancelled.
+Rate limited.
+Cannot be guessed or enumerated.
+Signed PDF generation
+After signing:
+Retrieve the exact consent PDF version.
+Verify the template hash.
+Add the client’s full name.
+Add signature image.
+Add signing date.
+Add appointment reference.
+Add consent version.
+Add a signature certificate page.
+Flatten the PDF.
+Generate a SHA-256 hash.
+Store the final document.
+Mark the consent as signed.
+Prevent further modification.
+The certificate page must include:
+LoveCry Electronic Consent Certificate
+Document title
+Document version
+Booking reference
+Client legal name
+Client email
+Signature method
+Signed date and time
+Signing-session ID
+Original-document hash
+Final-document hash
+IP address or masked IP, based on privacy policy
+User-agent summary
+Consent acknowledgements
+Do not display unnecessary technical information to the client, but preserve it in the audit record.
+9. GOOGLE DRIVE STORAGE
+Use a dedicated Shared Drive when available.
+Suggested structure:
+LoveCry Counselling Records/
+Consent Form Templates/
+Active/
+Retired/
+Signed Consent Forms/
+2026/
+01 - January/
+02 - February/
+Cancelled Appointments/
+Exports/
+Use file names that avoid unnecessary exposure:
+LC-CONSENT-2026-000001.pdf
+Do not use:
+John-Smith-Trauma-Counselling-Consent.pdf
+Store descriptive client information in the secure database, not necessarily in the Drive file name.
+Drive permissions
+Signed forms must:
+Never be public.
+Never use “Anyone with the link.”
+Be accessible only to authorized LoveCry staff.
+Be stored in a restricted folder.
+Not be shared with the client through a permanent public Drive URL.
+Use short-lived application-controlled download links.
+Be protected from unauthorized deletion.
+Be included in backup and retention policies.
+Store in PostgreSQL:
+Google Drive file ID.
+Folder ID.
+File name.
+MIME type.
+File size.
+PDF hash.
+Upload timestamp.
+Consent version.
+Permission status.
+Last verified timestamp.
+Create:
+/lib/google/drive.ts
+/lib/google/drive-folders.ts
+/lib/google/drive-files.ts
+/lib/google/drive-permissions.ts
+The application must verify upload success before marking the signed consent as stored.
+10. DATABASE ARCHITECTURE
+Create Prisma models equivalent to the following.
+Counsellor
+model Counsellor {
+id                     String        @id @default(cuid())
+userId                 String?       @unique
+displayName            String
+email                  String        @unique
+phone                  String?
+googleCalendarId       String
+googleWorkspaceUser    String?
+timeZone               String        @default("America/Toronto")
+active                 Boolean       @default(true)
+defaultDurationMinutes Int           @default(60)
+bufferBeforeMinutes    Int           @default(0)
+bufferAfterMinutes     Int           @default(15)
+createdAt              DateTime      @default(now())
+updatedAt              DateTime      @updatedAt
+appointments           Appointment[]
+availabilityRules      AvailabilityRule[]
+availabilityOverrides  AvailabilityOverride[]
+}
+Client
+model Client {
+id                        String        @id @default(cuid())
+firstName                 String
+lastName                  String
+email                     String
+phone                     String
+preferredContactMethod    ContactMethod?
+preferredLanguage         String?
+safeToLeaveVoicemail      Boolean       @default(false)
+safeToSendEmail           Boolean       @default(true)
+accessibilityRequirements String?
+emergencyContactName      String?
+emergencyContactPhone     String?
+emergencyRelationship     String?
+createdAt                 DateTime      @default(now())
+updatedAt                 DateTime      @updatedAt
+appointments              Appointment[]
+@@index([email])
+@@index([phone])
+}
+CounsellingService
+model CounsellingService {
+id                       String        @id @default(cuid())
+name                     String
+slug                     String        @unique
+description              String?
+durationMinutes          Int           @default(60)
+bufferBeforeMinutes      Int           @default(0)
+bufferAfterMinutes       Int           @default(15)
+appointmentMode          AppointmentMode
+requiresConsent          Boolean       @default(true)
+consentDeadlineHours     Int           @default(24)
+active                   Boolean       @default(true)
+createdAt                DateTime      @default(now())
+updatedAt                DateTime      @updatedAt
+appointments             Appointment[]
+}
+Appointment
+model Appointment {
+id                       String             @id @default(cuid())
+referenceNumber          String             @unique
+clientId                 String
+counsellorId             String
+serviceId                String
+startTimeUtc             DateTime
+endTimeUtc               DateTime
+timeZone                 String             @default("America/Toronto")
+status                   AppointmentStatus  @default(PENDING)
+appointmentMode          AppointmentMode
+location                 String?
+googleCalendarEventId    String?            @unique
+googleCalendarId         String?
+googleMeetUrl            String?
+clientNotesEncrypted     String?
+cancellationReason       String?
+cancelledAt              DateTime?
+completedAt              DateTime?
+noShowAt                 DateTime?
+consentStatus            ConsentStatus      @default(NOT_SENT)
+confirmationEmailStatus  DeliveryStatus     @default(PENDING)
+createdAt                DateTime            @default(now())
+updatedAt                DateTime            @updatedAt
+client                   Client              @relation(fields: [clientId], references: [id])
+counsellor               Counsellor          @relation(fields: [counsellorId], references: [id])
+service                  CounsellingService  @relation(fields: [serviceId], references: [id])
+signedConsent            SignedConsent?
+reminders                AppointmentReminder[]
+auditEvents              AppointmentAuditEvent[]
+@@index([counsellorId, startTimeUtc])
+@@index([clientId])
+@@index([status])
+@@index([consentStatus])
+}
+AvailabilityRule
+model AvailabilityRule {
+id                     String      @id @default(cuid())
+counsellorId           String
+weekday                Int
+startMinutesFromMidnight Int
+endMinutesFromMidnight Int
+effectiveFrom          DateTime?
+effectiveUntil         DateTime?
+active                 Boolean     @default(true)
+createdAt              DateTime    @default(now())
+updatedAt              DateTime    @updatedAt
+counsellor             Counsellor  @relation(fields: [counsellorId], references: [id])
+@@index([counsellorId, weekday])
+}
+AvailabilityOverride
+model AvailabilityOverride {
+id              String                   @id @default(cuid())
+counsellorId    String
+startTimeUtc    DateTime
+endTimeUtc      DateTime
+type            AvailabilityOverrideType
+reason          String?
+createdAt       DateTime                 @default(now())
+updatedAt       DateTime                 @updatedAt
+counsellor      Counsellor               @relation(fields: [counsellorId], references: [id])
+@@index([counsellorId, startTimeUtc, endTimeUtc])
+}
+AppointmentHold
+model AppointmentHold {
+id             String   @id @default(cuid())
+counsellorId   String
+startTimeUtc   DateTime
+endTimeUtc     DateTime
+tokenHash      String   @unique
+expiresAt      DateTime
+convertedAt    DateTime?
+createdAt      DateTime @default(now())
+@@index([counsellorId, startTimeUtc, endTimeUtc])
+@@index([expiresAt])
+}
+ConsentTemplate
+model ConsentTemplate {
+id                    String          @id @default(cuid())
+title                 String
+version               String
+status                TemplateStatus
+originalFileName      String
+googleDriveFileId     String?
+storageKey            String?
+documentHash          String
+effectiveAt           DateTime
+retiredAt             DateTime?
+uploadedByUserId      String?
+createdAt             DateTime        @default(now())
+updatedAt             DateTime        @updatedAt
+signedConsents        SignedConsent[]
+@@unique([title, version])
+}
+SignedConsent
+model SignedConsent {
+id                    String        @id @default(cuid())
+appointmentId         String        @unique
+consentTemplateId     String
+status                ConsentStatus
+clientLegalName       String
+clientEmail           String
+signatureMethod       SignatureMethod
+signatureStorageKey   String?
+signingSessionId      String        @unique
+signedAtUtc           DateTime
+sourceIpEncrypted     String?
+userAgent             String?
+originalDocumentHash  String
+finalDocumentHash     String        @unique
+googleDriveFileId     String?       @unique
+googleDriveFolderId   String?
+finalFileName         String?
+fileSizeBytes         Int?
+uploadedAt            DateTime?
+revokedAt             DateTime?
+revocationReason      String?
+createdAt             DateTime      @default(now())
+updatedAt             DateTime      @updatedAt
+appointment           Appointment   @relation(fields: [appointmentId], references: [id])
+consentTemplate       ConsentTemplate @relation(fields: [consentTemplateId], references: [id])
+auditEvents           ConsentAuditEvent[]
+}
+AppointmentReminder
+model AppointmentReminder {
+id               String         @id @default(cuid())
+appointmentId    String
+type              ReminderType
+scheduledForUtc  DateTime
+status            DeliveryStatus
+providerMessageId String?
+sentAt            DateTime?
+failureReason     String?
+attemptCount      Int            @default(0)
+createdAt         DateTime       @default(now())
+appointment       Appointment    @relation(fields: [appointmentId], references: [id])
+@@index([scheduledForUtc, status])
+}
+AppointmentAuditEvent
+model AppointmentAuditEvent {
+id              String      @id @default(cuid())
+appointmentId   String
+actorType       ActorType
+actorId         String?
+action          String
+previousData    Json?
+newData         Json?
+ipAddress       String?
+userAgent       String?
+createdAt       DateTime    @default(now())
+appointment     Appointment @relation(fields: [appointmentId], references: [id])
+@@index([appointmentId, createdAt])
+}
+ConsentAuditEvent
+model ConsentAuditEvent {
+id              String        @id @default(cuid())
+signedConsentId String
+action          String
+metadata        Json?
+eventHash       String?
+createdAt       DateTime      @default(now())
+signedConsent   SignedConsent @relation(fields: [signedConsentId], references: [id])
+@@index([signedConsentId, createdAt])
+}
+Create enums for:
+AppointmentStatus.
+AppointmentMode.
+ContactMethod.
+ConsentStatus.
+SignatureMethod.
+TemplateStatus.
+AvailabilityOverrideType.
+ReminderType.
+DeliveryStatus.
+ActorType.
+11. AVAILABILITY ENGINE
+Create:
+/lib/availability/generate-slots.ts
+/lib/availability/check-conflicts.ts
+/lib/availability/google-busy-times.ts
+/lib/availability/holds.ts
+/lib/availability/time-zone.ts
+The availability engine must:
+Load counsellor recurring availability.
+Apply date-specific overrides.
+Apply service duration.
+Apply before and after buffers.
+Retrieve Google Calendar busy periods.
+Retrieve existing active internal appointments.
+Retrieve unexpired temporary holds.
+Remove conflicting slots.
+Apply minimum-notice policy.
+Apply maximum-booking window.
+Return slots in the client’s displayed time zone.
+All timestamps must be stored in UTC.
+Display times using America/Toronto unless another time zone is explicitly selected.
+Handle daylight-saving transitions correctly.
+Double-booking protection
+Use database-level conflict protection.
+Before confirming a booking:
+Start a database transaction.
+Lock or validate the selected slot.
+Confirm the hold is active.
+Recheck Google Calendar.
+Recheck internal appointments.
+Create the booking.
+Mark the hold converted.
+Commit the transaction.
+If another booking wins the slot, return a friendly message and show new available times.
+12. BOOKING CONFIRMATION AND MANAGEMENT LINKS
+Generate secure client-management links.
+Examples:
+/bookings/manage/[token]
+/bookings/reschedule/[token]
+/bookings/cancel/[token]
+/consent/sign/[token]
+Tokens must:
+Be cryptographically random.
+Be stored as hashes.
+Be scoped to one action or booking.
+Expire.
+Be revocable.
+Be rate limited.
+Never expose appointment IDs directly.
+The client-management page must allow:
+View appointment summary.
+Reschedule.
+Cancel.
+Sign outstanding consent form.
+Download appointment confirmation.
+Add to calendar.
+Update safe contact preferences.
+Do not show sensitive counselling notes.
+13. RESCHEDULING WORKFLOW
+Client rescheduling:
+Client opens secure reschedule link.
+System verifies token.
+Available dates and times are shown.
+Client selects a new slot.
+System temporarily holds the new slot.
+System rechecks conflicts.
+Internal appointment is updated.
+Google Calendar event is updated.
+Google Meet link is preserved where appropriate.
+Old reminder jobs are cancelled.
+New reminders are created.
+Confirmation is sent.
+Audit event is written.
+Admin rescheduling must follow the same conflict checks.
+Allow administrators to override availability only with a warning and recorded reason.
+Set configurable rescheduling rules:
+Rescheduling deadline.
+Maximum number of client reschedules.
+Whether same-day rescheduling is permitted.
+Whether staff approval is required.
+14. CANCELLATION WORKFLOW
+Client cancellation:
+Verify secure token.
+Ask for optional cancellation reason.
+Confirm cancellation.
+Update internal status.
+Update or delete Google Calendar event according to policy.
+Cancel reminders.
+Invalidate consent-signing token if unsigned.
+Send cancellation confirmation.
+Notify counsellor.
+Write audit event.
+Do not permanently delete the appointment record.
+Use status:
+CANCELLED_BY_CLIENT
+Admin cancellation statuses:
+CANCELLED_BY_ADMIN
+CANCELLED_BY_COUNSELLOR
+Add configurable cancellation policy text.
+15. REMINDER SYSTEM
+Create background queues:
+appointment-confirmation
+appointment-reminder
+consent-reminder
+calendar-sync
+calendar-reconciliation
+drive-upload
+signed-pdf-generation
+client-cancellation
+client-rescheduling
+failed-notification
+Appointment reminders
+Suggested defaults:
+Immediately after booking.
+48 hours before appointment.
+24 hours before appointment.
+2 hours before appointment.
+Administrators must be able to configure these.
+Consent reminders
+When consent is unsigned, send:
+Immediately after booking.
+72 hours before appointment.
+48 hours before appointment.
+24 hours before appointment.
+Final reminder at the configured deadline.
+Do not send reminders after:
+Consent has been signed.
+Appointment has been cancelled.
+Appointment has passed.
+Client has opted out of a channel where legally permitted.
+If consent remains unsigned at the deadline:
+Mark as CONSENT_OVERDUE.
+Notify the administrator.
+Notify the counsellor.
+Optionally place the appointment on hold or cancel it based on admin policy.
+Never automatically claim that consent was provided.
+Reminder channels
+Initial release:
+Email.
+Optional future integration:
+SMS through Twilio or another Canadian-compatible provider.
+16. EMAIL TEMPLATES
+Create:
+/emails/BookingConfirmation.tsx
+/emails/AppointmentReminder.tsx
+/emails/ConsentRequired.tsx
+/emails/ConsentReminder.tsx
+/emails/ConsentSignedConfirmation.tsx
+/emails/AppointmentRescheduled.tsx
+/emails/AppointmentCancelled.tsx
+/emails/AdminNewBookingAlert.tsx
+/emails/AdminConsentOverdueAlert.tsx
+Booking confirmation
+Include:
+Client first name.
+Booking reference.
+Date.
+Time.
+Time zone.
+Session duration.
+Appointment type.
+Location or secure meeting information.
+Counsellor display name.
+Consent status.
+Sign-consent button if unsigned.
+Reschedule button.
+Cancel button.
+Add-to-calendar link.
+LoveCry contact details.
+Crisis disclaimer.
+Do not put sensitive intake details in email.
+Consent reminder
+Subject:
+Action required: Sign your LoveCry counselling consent form
+Include:
+Appointment date and time.
+Secure signing link.
+Signature deadline.
+Contact information.
+No sensitive clinical details.
+Signed confirmation
+Confirm that:
+The consent form was signed.
+The signing date.
+The appointment reference.
+LoveCry has securely stored the document.
+Do not attach the signed form by default unless LoveCry’s privacy policy and legal review approve email attachments.
+17. ADMIN COUNSELLING DASHBOARD
+Create:
+/admin/counselling
+/admin/counselling/calendar
+/admin/counselling/appointments
+/admin/counselling/appointments/[id]
+/admin/counselling/clients
+/admin/counselling/availability
+/admin/counselling/consent-forms
+/admin/counselling/settings
+/admin/counselling/google-integration
+/admin/counselling/audit-logs
+Dashboard metrics
+Display:
+Today’s appointments.
+Upcoming appointments.
+Appointments this week.
+Completed sessions.
+Cancelled sessions.
+No-shows.
+Unsigned consent forms.
+Overdue consent forms.
+Google Calendar synchronization errors.
+Drive upload errors.
+Failed email reminders.
+Appointment table
+Columns:
+Date.
+Time.
+Client name.
+Contact information.
+Counsellor.
+Appointment type.
+Status.
+Consent status.
+Confirmation status.
+Actions.
+Filters:
+Date range.
+Appointment status.
+Consent status.
+Appointment mode.
+Counsellor.
+Client name.
+Client email.
+Client phone.
+Booking reference.
+Appointment details
+Display:
+Booking information.
+Client contact information.
+Safe-contact preferences.
+Emergency contact.
+Appointment type.
+Intake answers.
+Consent status.
+Consent version.
+Signed date.
+Signed PDF link.
+Google Calendar event status.
+Google Meet link.
+Reminder history.
+Reschedule history.
+Cancellation history.
+Audit history.
+Admin actions:
+Reschedule.
+Cancel.
+Mark completed.
+Mark no-show.
+Resend confirmation.
+Send consent reminder.
+Send custom message.
+Copy email address.
+Copy phone number.
+Open Google Calendar event.
+View signed consent.
+Download signed consent.
+Retry Drive upload.
+Retry Calendar synchronization.
+Add internal note.
+Every action must create an audit record.
+18. COUNSELLOR EXPERIENCE
+The counsellor must be able to use Google Calendar on desktop or mobile.
+The counsellor should see:
+Appointment date and time.
+Client’s name.
+Safe contact details.
+Consent status.
+Appointment type.
+Location or Google Meet link.
+Secure admin-record link.
+Configured reminders.
+The counsellor may:
+Change the appointment time.
+Cancel the event.
+Add counsellor notes in the internal LoveCry portal.
+Join Google Meet.
+Mark availability as busy through Calendar events.
+Do not store confidential counselling-session notes in the general Google Calendar event description.
+Clinical or counselling notes must use a separately secured system if LoveCry later adds that feature.
+19. API ENDPOINTS
+Create secure APIs equivalent to:
+GET    /api/public/counselling/services
+GET    /api/public/counselling/availability
+POST   /api/public/counselling/holds
+DELETE /api/public/counselling/holds/:token
+POST   /api/public/counselling/bookings
+GET    /api/public/counselling/bookings/manage/:token
+POST   /api/public/counselling/bookings/reschedule
+POST   /api/public/counselling/bookings/cancel
+GET    /api/public/consent/:token
+POST   /api/public/consent/:token/sign
+GET    /api/admin/counselling/appointments
+GET    /api/admin/counselling/appointments/:id
+POST   /api/admin/counselling/appointments/:id/reschedule
+POST   /api/admin/counselling/appointments/:id/cancel
+POST   /api/admin/counselling/appointments/:id/complete
+POST   /api/admin/counselling/appointments/:id/no-show
+POST   /api/admin/counselling/appointments/:id/send-message
+POST   /api/admin/counselling/appointments/:id/resend-confirmation
+POST   /api/admin/counselling/appointments/:id/send-consent-reminder
+GET    /api/admin/counselling/availability
+POST   /api/admin/counselling/availability
+PATCH  /api/admin/counselling/availability/:id
+DELETE /api/admin/counselling/availability/:id
+GET    /api/admin/counselling/consent-templates
+POST   /api/admin/counselling/consent-templates
+POST   /api/admin/counselling/consent-templates/:id/activate
+POST   /api/admin/counselling/consent-templates/:id/retire
+POST   /api/integrations/google/calendar/notifications
+POST   /api/admin/integrations/google/reconcile
+GET    /api/admin/integrations/google/status
+Validate every request using Zod.
+Apply:
+Authentication.
+Role authorization.
+CSRF protection.
+Rate limiting.
+Bot protection.
+Input validation.
+Request-size limits.
+Audit logging.
+20. GOOGLE AUTHENTICATION
+Use server-side Google Workspace authentication.
+Required OAuth scopes should be minimized.
+Potential scopes may include:
+https://www.googleapis.com/auth/calendar
+https://www.googleapis.com/auth/drive.file
+Use broader Drive scopes only when clearly required.
+Do not store Google service-account credentials in source control.
+Use:
+GOOGLE_PROJECT_ID=
+GOOGLE_CLIENT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_WORKSPACE_ADMIN_EMAIL=
+GOOGLE_COUNSELLING_CALENDAR_ID=
+GOOGLE_SIGNED_CONSENT_FOLDER_ID=
+GOOGLE_CONSENT_TEMPLATE_FOLDER_ID=
+If domain-wide delegation is used:
+Configure it through Google Workspace Admin.
+Authorize only required scopes.
+Impersonate a dedicated service user.
+Do not impersonate arbitrary users.
+Document the setup.
+Support credential rotation.
+21. SECURITY AND PRIVACY REQUIREMENTS
+Treat appointment, client and consent data as highly sensitive.
+Implement:
+HTTPS only.
+Encryption in transit.
+Encryption at rest.
+Field-level encryption for sensitive intake notes.
+Secure secret management.
+Strict role-based access.
+Administrator MFA.
+Short session lifetime for administrators.
+Secure HTTP-only cookies.
+Content Security Policy.
+CSRF protection.
+Rate limiting.
+Bot protection on booking endpoints.
+Malware scanning for PDF uploads.
+Secure file validation.
+Signed and expiring download URLs.
+Immutable audit logs.
+Access logging.
+Backup encryption.
+Incident-response documentation.
+Data-retention policy.
+Secure deletion process.
+Least-privilege Google permissions.
+Never:
+Store raw credentials in the browser.
+Create public Google Drive links.
+Include sensitive counselling reasons in Calendar titles.
+Include confidential intake details in reminder emails.
+Log full consent content.
+Log signature image data.
+Expose sequential database IDs.
+Allow a client to view another client’s booking.
+Allow unsigned forms to be marked signed manually without an audited override.
+Audit logging
+Log every instance where sensitive information is:
+Viewed.
+Created.
+Modified.
+Downloaded.
+Shared.
+Exported.
+Deleted.
+Restored.
+Each audit event should include:
+User.
+Role.
+Action.
+Record type.
+Record ID.
+Timestamp.
+IP address.
+User agent.
+Previous and new values when appropriate.
+22. ACCESSIBILITY
+Meet WCAG 2.2 AA.
+The booking system must support:
+Keyboard navigation.
+Screen readers.
+Accessible date picker.
+Accessible time-slot selection.
+Visible focus states.
+Error summaries.
+Proper labels.
+Large touch targets.
+Mobile devices.
+Reduced-motion preferences.
+Sufficient contrast.
+Signature alternatives.
+For clients unable to draw a signature, allow typed signature plus explicit intent-to-sign confirmation.
+23. CONFIGURATION SETTINGS
+Create an admin settings page allowing configuration of:
+Organization name.
+Support email.
+Support phone.
+Default time zone.
+Booking-window length.
+Minimum booking notice.
+Appointment duration.
+Buffer before.
+Buffer after.
+Maximum daily appointments.
+Allowed rescheduling deadline.
+Allowed cancellation deadline.
+Consent signing policy.
+Consent deadline.
+Reminder timing.
+Appointment formats.
+Google Meet enabled.
+Google Calendar ID.
+Google Drive folder IDs.
+Crisis-message wording.
+Confirmation-email wording.
+Privacy-policy URL.
+Terms URL.
+Maintenance mode.
+Changes to sensitive settings must be audited.
+24. ENVIRONMENT VARIABLES
+Create .env.example:
+DATABASE_URL=
+REDIS_URL=
+NEXT_PUBLIC_SITE_URL=https://www.lovecry.ca
+APP_ENV=development
+APP_TIME_ZONE=America/Toronto
+AUTH_SECRET=
+ENCRYPTION_KEY=
+TOKEN_HASH_SECRET=
+CRON_SECRET=
+GOOGLE_PROJECT_ID=
+GOOGLE_CLIENT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_WORKSPACE_ADMIN_EMAIL=
+GOOGLE_COUNSELLING_CALENDAR_ID=
+GOOGLE_SIGNED_CONSENT_FOLDER_ID=
+GOOGLE_CONSENT_TEMPLATE_FOLDER_ID=
+EMAIL_PROVIDER=
+EMAIL_FROM=
+EMAIL_REPLY_TO=
+RESEND_API_KEY=
+SENTRY_DSN=
+BOOKING_HOLD_MINUTES=10
+DEFAULT_APPOINTMENT_DURATION_MINUTES=60
+DEFAULT_BUFFER_BEFORE_MINUTES=0
+DEFAULT_BUFFER_AFTER_MINUTES=15
+MINIMUM_BOOKING_NOTICE_HOURS=24
+MAXIMUM_BOOKING_WINDOW_DAYS=60
+CONSENT_DEADLINE_HOURS=24
+Validate all required environment variables during startup.
+25. TESTING REQUIREMENTS
+Use:
+Vitest or Jest.
+React Testing Library.
+Playwright.
+Test PostgreSQL database.
+Mocked Google APIs for unit tests.
+Google test calendar for integration testing.
+Availability tests
+Test:
+One-hour slot generation.
+Buffers.
+Lunch breaks.
+Holidays.
+Vacation.
+Existing internal appointment.
+Existing Google Calendar event.
+Expired booking hold.
+Active booking hold.
+Daylight-saving transition.
+Minimum booking notice.
+Maximum booking window.
+Maximum appointments per day.
+Simultaneous clients selecting the same slot.
+Booking tests
+Test:
+Successful booking.
+Google Calendar creation.
+Google Meet creation.
+Confirmation email.
+Failed Calendar creation.
+Retry after temporary Google failure.
+Duplicate submission.
+Invalid contact details.
+Expired hold.
+Cancelled booking.
+Rescheduled booking.
+Consent tests
+Test:
+Correct consent version.
+Drawn signature.
+Typed signature.
+Missing acknowledgement.
+Expired signing token.
+Reused signing token.
+Cancelled appointment token.
+Signed PDF generation.
+Original-document hash.
+Final-document hash.
+Google Drive upload.
+Drive upload retry.
+Duplicate signing attempt.
+Consent reminder cancellation after signing.
+Overdue unsigned consent.
+Security tests
+Test:
+Unauthorized admin access.
+Cross-client booking access.
+Token guessing.
+Expired management links.
+Public Drive permission prevention.
+Malicious PDF upload.
+XSS input.
+CSRF.
+Rate limits.
+Secrets absent from client bundles.
+Audit creation when signed PDF is viewed or downloaded.
+Calendar synchronization tests
+Test:
+Counsellor changes appointment time.
+Counsellor cancels event.
+Counsellor deletes event.
+Duplicate webhook notification.
+Out-of-order notification.
+Conflicting time change.
+Google API outage.
+Reconciliation recovery.
+26. DEVELOPMENT PHASES
+Phase 1 — Repository and infrastructure
+Inspect the existing LoveCry codebase.
+Identify existing authentication, database and admin architecture.
+Configure PostgreSQL.
+Configure Prisma.
+Configure Redis and background jobs.
+Add encryption utilities.
+Add audit logging.
+Add role-based authorization.
+Phase 2 — Google Workspace integration
+Create Google Cloud project.
+Enable Calendar and Drive APIs.
+Configure service account or OAuth.
+Configure approved scopes.
+Create counselling calendar.
+Create restricted Drive folders.
+Implement Google client services.
+Test Calendar and Drive access.
+Phase 3 — Admin availability
+Build counsellor profile.
+Build weekly availability.
+Build overrides.
+Build holidays and blocked times.
+Build client-slot preview.
+Add service-duration and buffer settings.
+Phase 4 — Client booking
+Build Book Now page.
+Build date picker.
+Build available-time selector.
+Add booking holds.
+Add client details.
+Add intake questions.
+Add conflict protection.
+Create booking confirmation.
+Phase 5 — Calendar automation
+Create Calendar event.
+Add counsellor.
+Add reminders.
+Create Google Meet link.
+Implement update and cancellation.
+Implement Calendar push notifications.
+Implement reconciliation jobs.
+Phase 6 — Consent management
+Build consent-template upload.
+Add immutable versioning.
+Build PDF viewer.
+Build signature pad.
+Build typed-signature option.
+Build intent-to-sign confirmations.
+Generate finalized signed PDF.
+Generate signature certificate.
+Upload to Drive.
+Store hashes and audit evidence.
+Phase 7 — Notifications
+Booking confirmations.
+Appointment reminders.
+Consent reminders.
+Rescheduling notices.
+Cancellation notices.
+Admin alerts.
+Failure retries.
+Phase 8 — Admin operations
+Appointment dashboard.
+Client contact information.
+Consent status.
+Signed-form viewing.
+Rescheduling.
+Cancellation.
+Completion and no-show.
+Retry failed Google operations.
+Audit-log viewer.
+Phase 9 — Security and quality
+Security tests.
+Accessibility tests.
+Privacy review.
+Load testing.
+Google quota handling.
+Backup and restore.
+Monitoring.
+Deployment documentation.
+27. REQUIRED DOCUMENTATION
+Create:
+README.md
+docs/BOOKING_ARCHITECTURE.md
+docs/GOOGLE_CALENDAR_SETUP.md
+docs/GOOGLE_DRIVE_SETUP.md
+docs/CONSENT_ESIGNATURE_WORKFLOW.md
+docs/ADMIN_BOOKING_GUIDE.md
+docs/COUNSELLOR_GOOGLE_CALENDAR_GUIDE.md
+docs/PRIVACY_AND_SECURITY.md
+docs/DATA_RETENTION.md
+docs/INCIDENT_RESPONSE.md
+docs/DEPLOYMENT.md
+docs/DISASTER_RECOVERY.md
+Documentation must explain:
+How Google Calendar integration works.
+How to create the dedicated counselling calendar.
+How the counsellor accesses it on mobile.
+How Google Drive folders are configured.
+How consent templates are uploaded.
+How signatures are captured.
+How finalized PDFs are generated.
+How signed forms are stored.
+How reminders work.
+How administrators reschedule and cancel.
+How Google Calendar changes synchronize back.
+How failed jobs are retried.
+How privacy and access are managed.
+How credentials are rotated.
+How backups are restored.
+28. ACCEPTANCE CRITERIA
+The feature is complete only when:
+A client can click Book Now on LoveCry.ca.
+The booking experience stays inside LoveCry.ca.
+Only administrator-approved times appear.
+Each appointment is one hour by default.
+Existing Google Calendar busy periods block availability.
+Two clients cannot book the same time.
+The client can enter their details.
+The client can review the consent PDF.
+The client can sign electronically inside the website.
+The system generates a finalized signed PDF.
+The signed PDF includes an audit certificate.
+The signed PDF is stored in restricted Google Drive.
+The admin dashboard shows signed or unsigned status.
+Unsigned clients receive automatic reminders.
+The client receives booking confirmation.
+The client can reschedule securely.
+The client can cancel securely.
+Google Calendar updates automatically.
+The counsellor sees the booking on mobile Google Calendar.
+The counsellor receives Calendar reminders.
+Admins can cancel and reschedule.
+Admins can view client contact information.
+Admins can view or download signed consent forms.
+Calendar and Drive failures retry automatically.
+Every sensitive action creates an audit event.
+Signed forms are never publicly accessible.
+The system passes accessibility and security tests.
+The full setup and operation are documented.
+29. INSTRUCTIONS FOR THE CODING AGENT
+Before coding:
+Inspect the entire existing LoveCry repository.
+Identify the framework, authentication system, database, UI system and deployment platform.
+Reuse established conventions.
+Do not rewrite unrelated features.
+Produce a concise implementation plan.
+List files to create and modify.
+Identify database migrations.
+Verify current Google Calendar and Drive API behaviour using official Google documentation.
+Do not invent unsupported Google APIs.
+Identify all security and privacy assumptions.
+Flag decisions requiring legal or privacy review.
+During implementation:
+Use strict TypeScript.
+Do not use any without a documented reason.
+Use database transactions.
+Use idempotency keys.
+Use UTC internally.
+Use proper time-zone conversion.
+Protect against double bookings.
+Validate all uploads.
+Generate PDFs server-side.
+Hash final signed documents.
+Keep Google credentials server-side.
+Use least-privilege Google scopes.
+Do not expose sensitive details in Calendar titles.
+Do not expose health or counselling details in email subjects.
+Do not create public Drive links.
+Do not mark consent signed without verifiable signing evidence.
+Do not permanently delete audit records.
+Add tests with each feature.
+At completion, provide:
+Architecture summary.
+Database schema changes.
+Migration instructions.
+Google Cloud setup instructions.
+Google Workspace Admin setup instructions.
+Google Calendar setup instructions.
+Google Drive folder and permission instructions.
+Environment-variable instructions.
+Files created and modified.
+Test results.
+Deployment instructions.
+Known limitations.
+Privacy and security checklist.
+Manual QA checklist.
+Screenshots or descriptions of each finished workflow.
+Do not provide only mockups, pseudocode or examples.
+Implement the complete feature in the existing LoveCry project.
