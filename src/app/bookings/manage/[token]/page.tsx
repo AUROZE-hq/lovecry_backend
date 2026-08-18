@@ -91,6 +91,12 @@ export default function ManageBookingPage() {
                 Sign consent
               </Link>
             )}
+            <Link
+              href={`/bookings/intake/${token}`}
+              className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-bold"
+            >
+              Complete intake
+            </Link>
           </div>
         )}
         <p className="mt-8 text-xs text-white/40">{s.crisisMessage}</p>

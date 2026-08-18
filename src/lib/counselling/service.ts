@@ -29,10 +29,20 @@ import {
   getSettings,
   getSignedConsent,
   listAppointments,
+  updateAppointmentIntake,
   upsertAppointment,
   upsertHold,
   upsertSignedConsent,
 } from './store';
+import {
+  counsellorFirstName,
+  durationMinutesBetween,
+  formatClockTime,
+  formatDateUpper,
+  formatDisplayTimeRange,
+  formatWeekdayDate,
+  formatWeekdayDateShort,
+} from './display';
 import { formatInTz } from './time-zone';
 import { generateToken, hashToken, nextAppointmentReference, sha256 } from './tokens';
 import type {
@@ -1036,15 +1046,69 @@ export async function getPublicBookingSummary(
     timeZone: appt.timeZone,
     displayDate: formatInTz(appt.startTimeUtc, { dateStyle: 'full' }, appt.timeZone),
     displayTime: formatInTz(appt.startTimeUtc, { timeStyle: 'short' }, appt.timeZone),
-    durationMinutes: settings.durationMinutes,
+    displayEndTime: formatClockTime(appt.endTimeUtc, appt.timeZone),
+    displayTimeRange: formatDisplayTimeRange(appt.startTimeUtc, appt.endTimeUtc, appt.timeZone),
+    displayWeekdayDate: formatWeekdayDate(appt.startTimeUtc, appt.timeZone),
+    displayWeekdayDateShort: formatWeekdayDateShort(appt.startTimeUtc, appt.timeZone),
+    displayDateUpper: formatDateUpper(appt.startTimeUtc, appt.timeZone),
+    durationMinutes: durationMinutesBetween(appt.startTimeUtc, appt.endTimeUtc),
     counsellorName: counsellor.displayName,
+    counsellorFirstName: counsellorFirstName(counsellor.displayName),
     serviceName: service?.name,
     clientFirstName: appt.client.firstName,
     consentSignedAt: signed?.signedAtUtc,
     crisisMessage: settings.crisisMessage,
     managePath: tokens?.manageToken ? `/bookings/manage/${tokens.manageToken}` : undefined,
     consentPath: tokens?.consentToken ? `/consent/sign/${tokens.consentToken}` : undefined,
+    intakePath: tokens?.manageToken ? `/bookings/intake/${tokens.manageToken}` : undefined,
   };
+}
+
+export async function getIntakeForManageToken(token: string) {
+  const appt = await resolveManageToken(token);
+  if (!appt) {
+    return { ok: false as const, error: 'Invalid or expired link.', code: 'NOT_FOUND' };
+  }
+  if (appt.status.startsWith('CANCELLED')) {
+    return { ok: false as const, error: 'This appointment has been cancelled.', code: 'CANCELLED' };
+  }
+
+  return {
+    ok: true as const,
+    intakeAnswers: appt.intakeAnswers ?? {},
+    summary: await getPublicBookingSummary(appt, { manageToken: token }),
+  };
+}
+
+export async function saveIntakeAnswers(token: string, answers: IntakeAnswers) {
+  const appt = await resolveManageToken(token);
+  if (!appt) {
+    return { ok: false as const, error: 'Invalid or expired link.', code: 'NOT_FOUND' };
+  }
+  if (appt.status.startsWith('CANCELLED')) {
+    return { ok: false as const, error: 'This appointment has been cancelled.', code: 'CANCELLED' };
+  }
+
+  const previous = appt.intakeAnswers ?? {};
+  const cleaned: IntakeAnswers = {};
+  for (const [key, value] of Object.entries(answers)) {
+    if (value !== undefined) cleaned[key] = value;
+  }
+  const next: IntakeAnswers = { ...previous, ...cleaned };
+  const updated = await updateAppointmentIntake(appt.id, next);
+  if (!updated) {
+    return { ok: false as const, error: 'Could not save intake answers.', code: 'VALIDATION' };
+  }
+
+  await addAudit({
+    appointmentId: appt.id,
+    actorType: 'CLIENT',
+    action: 'INTAKE_UPDATED',
+    previousData: previous,
+    newData: next,
+  });
+
+  return { ok: true as const, intakeAnswers: next };
 }
 
 export { generateSlotsForDate, listAppointments, getSettings, formatInTz, counsellingEnv, donationEnv };

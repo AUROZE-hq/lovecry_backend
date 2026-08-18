@@ -22,6 +22,7 @@ import type {
   ConsentTemplateRecord,
   CounsellorRecord,
   HoldRecord,
+  IntakeAnswers,
   ServiceRecord,
   SignedConsentRecord,
 } from './types';
@@ -277,6 +278,19 @@ export async function getAppointment(id: string): Promise<AppointmentRecord | un
     include: { client: true },
   });
   return row ? mapAppointment(row) : undefined;
+}
+
+export async function updateAppointmentIntake(
+  appointmentId: string,
+  intakeAnswers: IntakeAnswers
+): Promise<AppointmentRecord | undefined> {
+  await ready();
+  const row = await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { intakeAnswers: intakeAnswers as Prisma.InputJsonValue },
+    include: { client: true },
+  });
+  return mapAppointment(row);
 }
 
 export async function getAppointmentByReference(ref: string): Promise<AppointmentRecord | undefined> {

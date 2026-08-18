@@ -56,6 +56,9 @@ export async function deliverCounsellingEmail(input: {
       `Consent status: ${a.consentStatus}`,
       '',
       consentUrl && a.consentStatus !== 'SIGNED' ? `Sign consent: ${consentUrl}` : '',
+      input.manageToken
+        ? `Complete your confidential intake form: ${site}/bookings/intake/${input.manageToken}`
+        : '',
       input.manageToken ? `Manage / reschedule / cancel: ${manageUrl}` : '',
       '',
       crisis,
