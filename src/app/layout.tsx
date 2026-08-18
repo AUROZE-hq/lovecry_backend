@@ -40,6 +40,7 @@ import FluidCursor from "@/components/FluidCursor";
 import OrganizationJsonLd from "@/components/OrganizationJsonLd";
 import FixedPortalActions from "@/components/FixedPortalActions";
 import { IntroProvider } from "@/context/IntroContext";
+import { MarketplaceCartProvider } from "@/context/MarketplaceCartContext";
 import IntroRouteSync from "@/components/IntroRouteSync";
 
 export default function RootLayout({
@@ -51,15 +52,17 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${sora.variable} ${manrope.variable} antialiased`} suppressHydrationWarning>
       <body className={`min-h-screen bg-[#050505] font-sans selection:bg-brand-pink/30 selection:text-white ${sora.variable} ${manrope.variable}`}>
         <IntroProvider>
-          <IntroRouteSync />
-          <OrganizationJsonLd />
-          <FluidCursor />
-          <Navbar />
-          <FixedPortalActions />
-          <SmoothScroll>
-            <main>{children}</main>
-          </SmoothScroll>
-          <Footer />
+          <MarketplaceCartProvider>
+            <IntroRouteSync />
+            <OrganizationJsonLd />
+            <FluidCursor />
+            <Navbar />
+            <FixedPortalActions />
+            <SmoothScroll>
+              <main>{children}</main>
+            </SmoothScroll>
+            <Footer />
+          </MarketplaceCartProvider>
         </IntroProvider>
       </body>
     </html>

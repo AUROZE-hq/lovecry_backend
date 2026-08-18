@@ -15,11 +15,19 @@ export type AdminPermission =
   | 'counselling.google'
   | 'donations.write'
   | 'events.write'
+  | 'marketplace.write'
   | 'admin.users';
 
 const ROLE_PERMISSIONS: Record<AdminSessionUser['role'], AdminPermission[]> = {
-  SUPER_ADMIN: ['counselling.write', 'counselling.google', 'donations.write', 'events.write', 'admin.users'],
-  ADMIN: ['counselling.write', 'counselling.google', 'donations.write', 'events.write'],
+  SUPER_ADMIN: [
+    'counselling.write',
+    'counselling.google',
+    'donations.write',
+    'events.write',
+    'marketplace.write',
+    'admin.users',
+  ],
+  ADMIN: ['counselling.write', 'counselling.google', 'donations.write', 'events.write', 'marketplace.write'],
   COUNSELLOR_ADMIN: ['counselling.write', 'counselling.google'],
   READ_ONLY: [],
 };

@@ -128,6 +128,7 @@ export function AdminNav() {
     ['/admin/counselling/google-integration', 'Google'],
     ['/admin/counselling/audit-logs', 'Audit'],
     ['/admin/events', 'Events'],
+    ['/admin/marketplace', 'Marketplace'],
     ['/admin/donations', 'Donations'],
   ] as const;
 

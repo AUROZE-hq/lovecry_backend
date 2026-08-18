@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:seed:marketplace": "node prisma/seed-marketplace.mjs",
     "test:eligibility": "node tests/unit/eligibility.test.mjs"
   },
   "dependencies": {

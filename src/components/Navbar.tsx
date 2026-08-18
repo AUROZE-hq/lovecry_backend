@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { orgInfo } from '@/lib/org-info';
 import { aboutSubLinks } from '@/lib/about-nav';
 import { useIntro } from '@/context/IntroContext';
+import { useMarketplaceCart } from '@/context/MarketplaceCartContext';
 
 type NavLink = {
   label: string;
@@ -28,6 +29,7 @@ const navLinks: NavLink[] = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { cartCount } = useMarketplaceCart();
   const { isHomeIntroActive } = useIntro();
   const isHome = pathname === '/';
   const hiddenForIntro = isHome && isHomeIntroActive;
@@ -282,27 +284,38 @@ export default function Navbar() {
           <Link
             href="/marketplace"
             className="relative text-white/90 hover:text-white p-2 transition-colors group/cart"
-            aria-label="Marketplace cart"
+            aria-label={`Marketplace cart, ${cartCount} items`}
           >
             <ShoppingCart className="w-4 h-4 group-hover/cart:text-[#f1328b] transition-colors" />
-            <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[8px] font-black flex items-center justify-center border border-black/20">
-              3
+            <span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-0.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[8px] font-black flex items-center justify-center border border-black/20">
+              {cartCount}
             </span>
           </Link>
         </div>
 
-        {/* Mobile Menu Toggle */}
-        <button
-          type="button"
-          className="lg:hidden text-white p-2 shrink-0"
-          onClick={() => {
-            setMobileOpen((prev) => !prev);
-            setIsVisible(true);
-          }}
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-1 lg:hidden shrink-0">
+          <Link
+            href="/marketplace"
+            className="relative text-white/90 hover:text-white p-2 transition-colors"
+            aria-label={`Marketplace cart, ${cartCount} items`}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-0.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[8px] font-black flex items-center justify-center border border-black/20">
+              {cartCount}
+            </span>
+          </Link>
+          <button
+            type="button"
+            className="text-white p-2"
+            onClick={() => {
+              setMobileOpen((prev) => !prev);
+              setIsVisible(true);
+            }}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
         </div>
       </nav>
 

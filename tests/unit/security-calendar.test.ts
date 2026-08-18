@@ -58,12 +58,14 @@ describe('RBAC matrix', () => {
     expect(roleHasPermission('READ_ONLY', 'counselling.google')).toBe(false);
     expect(roleHasPermission('READ_ONLY', 'donations.write')).toBe(false);
     expect(roleHasPermission('READ_ONLY', 'events.write')).toBe(false);
+    expect(roleHasPermission('READ_ONLY', 'marketplace.write')).toBe(false);
   });
 
   it('allows COUNSELLOR_ADMIN counselling only', () => {
     expect(roleHasPermission('COUNSELLOR_ADMIN', 'counselling.write')).toBe(true);
     expect(roleHasPermission('COUNSELLOR_ADMIN', 'donations.write')).toBe(false);
     expect(roleHasPermission('COUNSELLOR_ADMIN', 'events.write')).toBe(false);
+    expect(roleHasPermission('COUNSELLOR_ADMIN', 'marketplace.write')).toBe(false);
   });
 
   it('allows SUPER_ADMIN everything', () => {

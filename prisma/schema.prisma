@@ -106,33 +106,33 @@ model Campaign {
 }
 
 model Donation {
-  id                         String            @id @default(cuid())
-  localReference             String?           @unique
-  zeffyTransactionId         String?           @unique
-  zeffyPaymentId             String?           @unique
+  id                         String              @id @default(cuid())
+  localReference             String?             @unique
+  zeffyTransactionId         String?             @unique
+  zeffyPaymentId             String?             @unique
   donorId                    String?
   campaignId                 String?
   amountCents                Int
-  eligibleReceiptAmountCents Int               @default(0)
-  currency                   String            @default("CAD")
+  eligibleReceiptAmountCents Int                 @default(0)
+  currency                   String              @default("CAD")
   frequency                  DonationFrequency
   status                     DonationStatus
-  paymentProvider            String            @default("ZEFFY")
-  isAnonymous                Boolean           @default(false)
-  isEligibleGift             Boolean           @default(true)
+  paymentProvider            String              @default("ZEFFY")
+  isAnonymous                Boolean             @default(false)
+  isEligibleGift             Boolean             @default(true)
   dedicationType             DedicationType?
   dedicationName             String?
-  donorMessage               String?           @db.Text
+  donorMessage               String?             @db.Text
   transactionDate            DateTime?
-  receiptRequired            Boolean           @default(false)
-  receiptStatus              ReceiptStatus     @default(NOT_REQUIRED)
+  receiptRequired            Boolean             @default(false)
+  receiptStatus              ReceiptStatus       @default(NOT_REQUIRED)
   receiptId                  String?
-  confirmationEmailStatus    EmailStatus       @default(PENDING)
+  confirmationEmailStatus    EmailStatus         @default(PENDING)
   rawProviderMetadata        Json?
-  createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @updatedAt
-  donor                      Donor?            @relation(fields: [donorId], references: [id])
-  campaign                   Campaign?         @relation(fields: [campaignId], references: [id])
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  donor                      Donor?              @relation(fields: [donorId], references: [id])
+  campaign                   Campaign?           @relation(fields: [campaignId], references: [id])
   receipt                    DonationReceipt?
   syncEvents                 DonationSyncEvent[]
 
@@ -349,21 +349,21 @@ model Counsellor {
 }
 
 model CounsellingClient {
-  id                        String        @id @default(cuid())
+  id                        String         @id @default(cuid())
   firstName                 String
   lastName                  String
   email                     String
   phone                     String
   preferredContactMethod    ContactMethod?
   preferredLanguage         String?
-  safeToLeaveVoicemail      Boolean       @default(false)
-  safeToSendEmail           Boolean       @default(true)
-  accessibilityRequirements String?       @db.Text
+  safeToLeaveVoicemail      Boolean        @default(false)
+  safeToSendEmail           Boolean        @default(true)
+  accessibilityRequirements String?        @db.Text
   emergencyContactName      String?
   emergencyContactPhone     String?
   emergencyRelationship     String?
-  createdAt                 DateTime      @default(now())
-  updatedAt                 DateTime      @updatedAt
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
   appointments              Appointment[]
 
   @@index([email])
@@ -388,42 +388,42 @@ model CounsellingService {
 }
 
 model Appointment {
-  id                      String                @id @default(cuid())
-  referenceNumber         String                @unique
+  id                      String                  @id @default(cuid())
+  referenceNumber         String                  @unique
   clientId                String
   counsellorId            String
   serviceId               String
   startTimeUtc            DateTime
   endTimeUtc              DateTime
-  timeZone                String                @default("America/Toronto")
-  status                  AppointmentStatus     @default(PENDING)
+  timeZone                String                  @default("America/Toronto")
+  status                  AppointmentStatus       @default(PENDING)
   appointmentMode         AppointmentMode
   location                String?
-  googleCalendarEventId   String?               @unique
+  googleCalendarEventId   String?                 @unique
   googleCalendarId        String?
   googleMeetUrl           String?
-  googleEventHtmlLink     String?               @db.Text
-  googleSyncStatus        GoogleSyncStatus      @default(NOT_SYNCED)
-  googleSyncError         String?               @db.Text
+  googleEventHtmlLink     String?                 @db.Text
+  googleSyncStatus        GoogleSyncStatus        @default(NOT_SYNCED)
+  googleSyncError         String?                 @db.Text
   googleSyncedAt          DateTime?
-  clientNotes             String?               @db.Text
+  clientNotes             String?                 @db.Text
   intakeAnswers           Json?
   cancellationReason      String?
   cancelledBy             ActorType?
   cancelledAt             DateTime?
   completedAt             DateTime?
   noShowAt                DateTime?
-  consentStatus           ConsentStatus         @default(NOT_SENT)
-  confirmationEmailStatus DeliveryStatus        @default(PENDING)
+  consentStatus           ConsentStatus           @default(NOT_SENT)
+  confirmationEmailStatus DeliveryStatus          @default(PENDING)
   manageTokenHash         String?
   consentTokenHash        String?
-  rescheduleCount         Int                   @default(0)
-  idempotencyKey          String?               @unique
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  client                  CounsellingClient     @relation(fields: [clientId], references: [id])
-  counsellor              Counsellor            @relation(fields: [counsellorId], references: [id])
-  service                 CounsellingService    @relation(fields: [serviceId], references: [id])
+  rescheduleCount         Int                     @default(0)
+  idempotencyKey          String?                 @unique
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  client                  CounsellingClient       @relation(fields: [clientId], references: [id])
+  counsellor              Counsellor              @relation(fields: [counsellorId], references: [id])
+  service                 CounsellingService      @relation(fields: [serviceId], references: [id])
   signedConsent           SignedConsent?
   reminders               AppointmentReminder[]
   auditEvents             AppointmentAuditEvent[]
@@ -467,14 +467,14 @@ model AvailabilityOverride {
 }
 
 model AppointmentHold {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   counsellorId String
   startTimeUtc DateTime
   endTimeUtc   DateTime
-  tokenHash    String   @unique
+  tokenHash    String    @unique
   expiresAt    DateTime
   convertedAt  DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([counsellorId, startTimeUtc, endTimeUtc])
   @@index([expiresAt])
@@ -598,23 +598,97 @@ model AppointmentSequence {
   updatedAt DateTime @updatedAt
 }
 
+// ——— Marketplace ———
+
+enum MarketplaceProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MarketplaceImageRole {
+  FRONT
+  BACK
+  GALLERY
+}
+
+model MarketplaceProduct {
+  id          String                   @id @default(cuid())
+  slug        String                   @unique
+  name        String
+  subtitle    String?
+  description String                   @db.Text
+  badge       String?
+  category    String?
+  currency    String                   @default("CAD")
+  priceCents  Int?
+  status      MarketplaceProductStatus @default(DRAFT)
+  featured    Boolean                  @default(false)
+  inStock     Boolean                  @default(true)
+
+  messageEyebrow  String?
+  messageTitle    String?
+  messageSubtitle String?
+  messageBody     String? @db.Text
+
+  createdByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy AdminUser? @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  images MarketplaceProductImage[]
+  sizes  MarketplaceProductSize[]
+
+  @@index([status, featured])
+  @@index([createdAt])
+  @@index([category])
+}
+
+model MarketplaceProductImage {
+  id        String               @id @default(cuid())
+  productId String
+  url       String               @db.Text
+  altText   String?
+  role      MarketplaceImageRole
+  sortOrder Int                  @default(0)
+
+  product MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, role, sortOrder])
+}
+
+model MarketplaceProductSize {
+  id        String  @id @default(cuid())
+  productId String
+  label     String
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  product MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, label])
+  @@index([productId, active, sortOrder])
+}
+
 // ——— Admin authentication ———
 
 model AdminUser {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  displayName  String
-  passwordHash String
-  role         AdminRole      @default(ADMIN)
-  active       Boolean        @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  sessions     AdminSession[]
-  integrations GoogleCalendarIntegration[]
-  auditLogs    AuditLog[]     @relation("AdminAuditLogs")
-  eventsCreated Event[]       @relation("EventCreatedBy")
-  eventsUpdated Event[]       @relation("EventUpdatedBy")
+  id                  String                      @id @default(cuid())
+  email               String                      @unique
+  displayName         String
+  passwordHash        String
+  role                AdminRole                   @default(ADMIN)
+  active              Boolean                     @default(true)
+  lastLoginAt         DateTime?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  sessions            AdminSession[]
+  integrations        GoogleCalendarIntegration[]
+  auditLogs           AuditLog[]                  @relation("AdminAuditLogs")
+  eventsCreated       Event[]                     @relation("EventCreatedBy")
+  eventsUpdated       Event[]                     @relation("EventUpdatedBy")
+  marketplaceProducts MarketplaceProduct[]
 
   @@index([role, active])
 }
@@ -693,9 +767,9 @@ enum EventRegistrationStatus {
 }
 
 model Event {
-  id        String @id @default(cuid())
-  title     String
-  slug      String @unique
+  id    String @id @default(cuid())
+  title String
+  slug  String @unique
 
   shortDescription String  @db.VarChar(500)
   description      String? @db.Text
@@ -714,7 +788,7 @@ model Event {
   province       String?
   postalCode     String?
   onlinePlatform String?
-  onlineUrl      String? @db.Text
+  onlineUrl      String?           @db.Text
 
   coverImageUrl String? @db.Text
   coverImageAlt String?
@@ -741,9 +815,9 @@ model Event {
   createdBy        AdminUser? @relation("EventCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
   updatedBy        AdminUser? @relation("EventUpdatedBy", fields: [updatedByAdminId], references: [id], onDelete: SetNull)
 
-  media          EventMedia[]
-  highlights     EventHighlight[]
-  registrations  EventRegistration[]
+  media         EventMedia[]
+  highlights    EventHighlight[]
+  registrations EventRegistration[]
 
   @@index([status, startDateTime])
   @@index([startDateTime])
