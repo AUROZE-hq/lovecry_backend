@@ -37,10 +37,10 @@ export default function EventsTabs() {
             aria-selected={selected}
             aria-controls={tab.id}
             onClick={() => setActive(tab.id)}
-            className={`inline-flex min-h-11 items-center justify-center rounded-full px-4 py-3 text-center text-[13px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#693492] sm:px-5 sm:text-sm ${
+            className={`inline-flex min-h-11 items-center justify-center rounded-full px-4 py-3 text-center text-[13px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f1328b] sm:px-5 sm:text-sm ${
               selected
-                ? 'bg-[#693492] text-white shadow-sm'
-                : 'border border-[#693492] bg-white text-[#693492] hover:bg-[#693492]/5'
+                ? 'bg-[#f1328b] text-white shadow-sm shadow-[#f1328b]/20'
+                : 'border border-white/15 bg-white/[0.04] text-white/60 hover:border-[#f1328b]/40 hover:bg-white/[0.06] hover:text-white'
             }`}
           >
             {tab.label}

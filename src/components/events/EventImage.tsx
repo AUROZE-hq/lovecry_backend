@@ -5,13 +5,24 @@ type EventImageProps = {
   alt: string;
   className?: string;
   sizes?: string;
+  placeholderVariant?: 'light' | 'dark';
 };
 
-export default function EventImage({ src, alt, className = '', sizes }: EventImageProps) {
+export default function EventImage({
+  src,
+  alt,
+  className = '',
+  sizes,
+  placeholderVariant = 'light',
+}: EventImageProps) {
   if (!src) {
+    const placeholderClass =
+      placeholderVariant === 'dark'
+        ? 'bg-gradient-to-br from-[#18101d] via-[#120c16] to-[#0d0910]'
+        : 'bg-gradient-to-br from-[#EDE4F5] via-[#F7F0F4] to-[#E8D5EA]';
     return (
       <div
-        className={`bg-gradient-to-br from-[#EDE4F5] via-[#F7F0F4] to-[#E8D5EA] ${className}`}
+        className={`${placeholderClass} ${className}`}
         aria-hidden={alt ? undefined : true}
         role={alt ? 'img' : undefined}
         aria-label={alt || undefined}
