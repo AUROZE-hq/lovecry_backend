@@ -4,22 +4,20 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Menu, X, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 import { orgInfo } from '@/lib/org-info';
-import { aboutSubLinks } from '@/lib/about-nav';
 import { useIntro } from '@/context/IntroContext';
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext';
 
 type NavLink = {
   label: string;
   href: string;
-  children?: readonly { label: string; href: string }[];
 };
 
 const navLinks: NavLink[] = [
   { label: 'Home', href: '/#home' },
-  { label: 'About Us', href: '/about', children: aboutSubLinks },
+  { label: 'About Us', href: '/about' },
   { label: 'Marketplace', href: '/marketplace' },
   { label: 'Events', href: '/events' },
   { label: 'News', href: '/news' },
@@ -36,15 +34,11 @@ export default function Navbar() {
   const [isVisible, setIsVisible] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [aboutMenuOpen, setAboutMenuOpen] = useState(false);
-  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
 
   const closeMobileMenu = () => {
     setMobileOpen(false);
     setIsVisible(true);
     setHoveredIndex(null);
-    setMobileAboutOpen(false);
-    setAboutMenuOpen(false);
   };
 
   useEffect(() => {
@@ -187,72 +181,7 @@ export default function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden lg:flex flex-1 items-center justify-center relative py-1">
-          {navLinks.map((link, i) =>
-            link.children ? (
-              <div
-                key={link.label}
-                className="relative"
-                onMouseEnter={() => {
-                  setHoveredIndex(i);
-                  setAboutMenuOpen(true);
-                }}
-                onMouseLeave={() => {
-                  setHoveredIndex(null);
-                  setAboutMenuOpen(false);
-                }}
-              >
-                <Link
-                  href={link.href}
-                  className="relative flex items-center gap-1 px-3 py-2 text-[11px] font-bold text-white/90 hover:text-white uppercase tracking-[0.18em] transition-colors z-10 xl:px-4 xl:text-xs xl:tracking-widest"
-                  aria-haspopup="menu"
-                  aria-expanded={aboutMenuOpen}
-                >
-                  <span className="relative z-10">{link.label}</span>
-                  <ChevronDown
-                    className={`relative z-10 h-3 w-3 transition-transform ${aboutMenuOpen ? 'rotate-180' : ''}`}
-                    aria-hidden
-                  />
-
-                  <AnimatePresence>
-                    {hoveredIndex === i && (
-                      <motion.div
-                        layoutId="nav-pill"
-                        className="absolute inset-0 bg-white/15 rounded-full z-0 border border-white/20"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                      />
-                    )}
-                  </AnimatePresence>
-                </Link>
-
-                <AnimatePresence>
-                  {aboutMenuOpen && (
-                    <motion.div
-                      role="menu"
-                      aria-label="About Us submenu"
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute left-1/2 top-full z-50 mt-3 w-64 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-black/90 p-2 shadow-2xl backdrop-blur-xl"
-                    >
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.label}
-                          href={child.href}
-                          role="menuitem"
-                          className="block rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f1328b]"
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ) : (
+          {navLinks.map((link, i) => (
               <Link
                 key={link.label}
                 href={link.href}
@@ -275,8 +204,7 @@ export default function Navbar() {
                   )}
                 </AnimatePresence>
               </Link>
-            ),
-          )}
+            ))}
         </div>
 
         {/* Right Actions — cart only; portal buttons live in FixedPortalActions */}
@@ -332,48 +260,7 @@ export default function Navbar() {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="flex flex-col gap-5">
-              {navLinks.map((link) =>
-                link.children ? (
-                  <div key={link.label} className="border-b border-white/5 pb-4">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between text-white font-bold text-lg sm:text-xl uppercase tracking-widest active:text-[#f1328b] transition-colors"
-                      aria-expanded={mobileAboutOpen}
-                      aria-controls="mobile-about-submenu"
-                      onClick={() => setMobileAboutOpen((prev) => !prev)}
-                    >
-                      {link.label}
-                      <ChevronDown
-                        className={`h-5 w-5 transition-transform ${mobileAboutOpen ? 'rotate-180' : ''}`}
-                        aria-hidden
-                      />
-                    </button>
-
-                    <AnimatePresence>
-                      {mobileAboutOpen && (
-                        <motion.div
-                          id="mobile-about-submenu"
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="mt-3 flex flex-col gap-2 overflow-hidden pl-4"
-                        >
-                          {link.children.map((child) => (
-                            <Link
-                              key={child.label}
-                              href={child.href}
-                              className="py-2 text-sm font-bold uppercase tracking-widest text-white/70 active:text-[#f1328b] transition-colors"
-                              onClick={closeMobileMenu}
-                            >
-                              {child.label}
-                            </Link>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ) : (
+              {navLinks.map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
@@ -382,8 +269,7 @@ export default function Navbar() {
                   >
                     {link.label}
                   </Link>
-                ),
-              )}
+                ))}
 
               <Link
                 href="/marketplace"

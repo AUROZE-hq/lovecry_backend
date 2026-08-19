@@ -41,7 +41,7 @@ const supportLinks = [
   { label: 'Donate', href: '/donate' },
   { label: 'Volunteer', href: '/contact#support-options' },
   { label: 'Contact', href: '/contact' },
-  { label: 'Transparency & Governance', href: '/about/transparency-governance' },
+  { label: 'Transparency & Governance', href: '/about#transparency-governance' },
 ];
 
 const centerSocialLinks = [

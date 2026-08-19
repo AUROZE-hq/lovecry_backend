@@ -7,6 +7,8 @@ import {
   Sparkles,
   Heart,
 } from 'lucide-react';
+import BoardSection from '@/components/about/BoardSection';
+import TransparencyContent from '@/components/about/TransparencyContent';
 import { orgInfo } from '@/lib/org-info';
 
 export default function AboutPage() {
@@ -373,6 +375,9 @@ export default function AboutPage() {
           </motion.div>
         </div>
       </section>
+
+      <BoardSection />
+      <TransparencyContent />
 
       <motion.section 
         initial={{ opacity: 0, y: 40 }}
