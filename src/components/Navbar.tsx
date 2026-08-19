@@ -159,15 +159,15 @@ export default function Navbar() {
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            className="relative flex items-center justify-center w-6 h-6"
+            className="relative flex size-[1.95rem] items-center justify-center"
           >
             <div className="absolute inset-0 bg-[#f1328b] blur-[15px] opacity-20 group-hover/logo:opacity-50 transition-opacity" />
             <Image
               src="/LoveCryLogo.png"
               alt="LoveCry logo"
-              width={24}
-              height={24}
-              className="relative z-10 h-6 w-6 object-contain"
+              width={32}
+              height={32}
+              className="relative z-10 size-[1.95rem] object-contain"
               priority
             />
           </motion.div>

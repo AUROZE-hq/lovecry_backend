@@ -15,7 +15,7 @@ export default function MarketplaceHero({ compact = false }: Props) {
         <p className="mt-3 max-w-2xl text-base text-white/90 sm:text-lg lg:mx-auto">
           <span className="lg:hidden">Official LoveCry merchandise.</span>
           <span className="hidden lg:inline">
-            Official LoveCry merchandise — made to carry the message beyond the moment.
+            Official LoveCry merchandise made to carry the message beyond the moment.
           </span>
         </p>
       </div>
