@@ -199,3 +199,97 @@ export async function createMarketplaceProduct(
     throw err;
   }
 }
+
+export async function getAdminProductById(id: string): Promise<MarketplaceProductView> {
+  const row = await prisma.marketplaceProduct.findUnique({
+    where: { id },
+    include: productInclude,
+  });
+  if (!row) throw new MarketplaceServiceError('Product not found', 404);
+  return toView(row);
+}
+
+export async function updateMarketplaceProduct(id: string, raw: unknown): Promise<MarketplaceProductView> {
+  const input = parseWriteInput(raw);
+  const existing = await prisma.marketplaceProduct.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+  if (!existing) throw new MarketplaceServiceError('Product not found', 404);
+
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      if (input.featured) {
+        await tx.marketplaceProduct.updateMany({
+          where: { featured: true, id: { not: id } },
+          data: { featured: false },
+        });
+      }
+
+      await tx.marketplaceProduct.update({
+        where: { id },
+        data: {
+          name: input.name,
+          slug: input.slug,
+          subtitle: input.subtitle ?? null,
+          description: input.description,
+          category: input.category ?? null,
+          badge: input.badge ?? null,
+          currency: input.currency,
+          priceCents: input.priceCents,
+          status: input.status,
+          featured: input.featured,
+          inStock: input.inStock,
+          messageEyebrow: input.messageEyebrow ?? null,
+          messageTitle: input.messageTitle ?? null,
+          messageSubtitle: input.messageSubtitle ?? null,
+          messageBody: input.messageBody ?? null,
+        },
+      });
+
+      await tx.marketplaceProductImage.deleteMany({
+        where: { productId: id, role: { in: ['FRONT', 'BACK'] } },
+      });
+      await tx.marketplaceProductImage.createMany({
+        data: [
+          {
+            productId: id,
+            url: input.frontImageUrl,
+            altText: input.frontImageAlt || `${input.name} front`,
+            role: 'FRONT',
+            sortOrder: 0,
+          },
+          {
+            productId: id,
+            url: input.backImageUrl,
+            altText: input.backImageAlt || `${input.name} back`,
+            role: 'BACK',
+            sortOrder: 1,
+          },
+        ],
+      });
+
+      await tx.marketplaceProductSize.deleteMany({ where: { productId: id } });
+      await tx.marketplaceProductSize.createMany({
+        data: input.sizes.map((label, index) => ({
+          productId: id,
+          label,
+          sortOrder: index,
+          active: true,
+        })),
+      });
+
+      return tx.marketplaceProduct.findUniqueOrThrow({
+        where: { id },
+        include: productInclude,
+      });
+    });
+
+    return toView(updated);
+  } catch (err) {
+    if (err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === 'P2002') {
+      throw new MarketplaceServiceError('A product with this slug already exists.', 409);
+    }
+    throw err;
+  }
+}

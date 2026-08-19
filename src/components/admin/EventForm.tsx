@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { EventWithRelations } from '@/lib/events/service';
 import { utcToLocalDateTimeParts } from '@/lib/events/display';
 import { slugifyTitle } from '@/lib/events/slug';
@@ -13,7 +13,25 @@ const fieldClass =
   'mt-1 w-full rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-sm normal-case text-white';
 const labelClass = 'text-xs uppercase tracking-wider text-white/45';
 
-type GalleryItem = { url: string; altText: string };
+type GalleryItem = { id: string; url: string; altText: string };
+
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/avif';
+
+async function uploadEventImage(file: File): Promise<string> {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch('/api/admin/events/upload', {
+    method: 'POST',
+    body,
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | { success?: boolean; error?: string; image?: { url?: string } }
+    | null;
+  if (!response.ok || !payload?.success || !payload.image?.url) {
+    throw new Error(payload?.error || 'Unable to upload image.');
+  }
+  return payload.image.url;
+}
 
 type EventFormProps = {
   mode: 'create' | 'edit';
@@ -63,7 +81,11 @@ function eventToDefaults(event?: EventWithRelations) {
     activitiesCount: event?.activitiesCount != null ? String(event.activitiesCount) : '',
     peopleReached: event?.peopleReached != null ? String(event.peopleReached) : '',
     highlights: event?.highlights.map((h) => h.text) ?? [''],
-    gallery: (event?.media.map((m) => ({ url: m.url, altText: m.altText ?? '' })) ?? []) as GalleryItem[],
+    gallery: (event?.media.map((m) => ({
+      id: m.id,
+      url: m.url,
+      altText: m.altText ?? '',
+    })) ?? []) as GalleryItem[],
   };
 }
 
@@ -77,10 +99,55 @@ export default function EventForm({ mode, event, canWrite }: EventFormProps) {
   const [highlights, setHighlights] = useState(defaults.highlights.length ? defaults.highlights : ['']);
   const [gallery, setGallery] = useState<GalleryItem[]>(defaults.gallery);
   const [coverImageUrl, setCoverImageUrl] = useState(defaults.coverImageUrl);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const uploadPending = coverUploading || galleryUploading;
 
   const action = mode === 'create' ? createEventAction : updateEventAction;
   const showVenue = locationType === 'IN_PERSON' || locationType === 'HYBRID';
   const showOnline = locationType === 'ONLINE' || locationType === 'HYBRID';
+
+  async function handleCoverSelected(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setCoverError(null);
+    setCoverUploading(true);
+    try {
+      const url = await uploadEventImage(file);
+      setCoverImageUrl(url);
+    } catch (err) {
+      setCoverError(err instanceof Error ? err.message : 'Unable to upload image.');
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  }
+
+  async function handleGallerySelected(files: FileList | null) {
+    if (!files?.length) return;
+    const selected = Array.from(files);
+    setGalleryError(null);
+    setGalleryUploading(true);
+    const failures: string[] = [];
+    try {
+      for (const file of selected) {
+        try {
+          const url = await uploadEventImage(file);
+          setGallery((rows) => [...rows, { id: `${url}-${crypto.randomUUID()}`, url, altText: '' }]);
+        } catch (err) {
+          failures.push(`${file.name}: ${err instanceof Error ? err.message : 'Unable to upload image.'}`);
+        }
+      }
+    } finally {
+      setGalleryUploading(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+    if (failures.length) setGalleryError(failures.join(' '));
+  }
 
   return (
     <form action={action} className="mt-8 space-y-10">
@@ -222,43 +289,92 @@ export default function EventForm({ mode, event, canWrite }: EventFormProps) {
 
       <fieldset disabled={!canWrite} className="space-y-4">
         <legend className="text-lg font-bold text-white">Images</legend>
-        <p className="text-sm text-white/50">
-          Paste a site path such as <code>/event (1).jpg</code> or an https:// URL. This project has no Cloudinary/S3 uploader.
-        </p>
-        <label className={labelClass}>
-          Cover image URL
+        <p className="text-sm text-white/50">Upload JPG, PNG, WebP or AVIF images. Maximum 8 MB per image.</p>
+
+        <div className="space-y-3">
+          <p className={labelClass}>Cover image</p>
+          <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
           <input
-            name="coverImageUrl"
-            value={coverImageUrl}
-            onChange={(e) => setCoverImageUrl(e.target.value)}
-            className={fieldClass}
+            ref={coverInputRef}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            className="hidden"
+            onChange={(e) => void handleCoverSelected(e.target.files)}
           />
-        </label>
-        {coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverImageUrl} alt="" className="h-40 w-full rounded-xl object-cover" />
-        ) : null}
+          {coverImageUrl ? (
+            <div className="space-y-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={coverImageUrl} alt="" className="h-40 w-full rounded-xl object-cover" />
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="text-sm text-[#f1328b]"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={coverUploading}
+                >
+                  Change image
+                </button>
+                <button
+                  type="button"
+                  className="text-sm text-white/50"
+                  onClick={() => {
+                    setCoverImageUrl('');
+                    setCoverError(null);
+                  }}
+                  disabled={coverUploading}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 hover:border-[#f1328b]/40"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverUploading}
+            >
+              Choose image
+            </button>
+          )}
+          {coverUploading ? <p className="text-sm text-white/55">Uploading...</p> : null}
+          {coverError ? (
+            <p className="text-sm text-red-200" role="alert">
+              {coverError}
+            </p>
+          ) : null}
+        </div>
+
         <label className={labelClass}>
           Cover image alt text
           <input name="coverImageAlt" defaultValue={defaults.coverImageAlt} className={fieldClass} />
         </label>
+
         <div>
           <p className="text-sm font-semibold text-white">Gallery</p>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(e) => void handleGallerySelected(e.target.files)}
+          />
           <div className="mt-3 space-y-3">
-            {gallery.map((item, index) => (
-              <div key={index} className="grid gap-2 rounded-xl border border-white/10 p-3 sm:grid-cols-[1fr_1fr_auto]">
-                <input
-                  value={item.url}
-                  onChange={(e) =>
-                    setGallery((rows) => rows.map((row, i) => (i === index ? { ...row, url: e.target.value } : row)))
-                  }
-                  placeholder="Image URL"
-                  className={fieldClass}
-                />
+            {gallery.map((item) => (
+              <div key={item.id} className="grid gap-3 rounded-xl border border-white/10 p-3 sm:grid-cols-[6rem_1fr_auto] sm:items-center">
+                {item.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.url} alt="" className="h-20 w-full rounded-lg object-cover sm:h-16 sm:w-24" />
+                ) : (
+                  <div className="h-20 rounded-lg bg-white/5 sm:h-16 sm:w-24" />
+                )}
                 <input
                   value={item.altText}
                   onChange={(e) =>
-                    setGallery((rows) => rows.map((row, i) => (i === index ? { ...row, altText: e.target.value } : row)))
+                    setGallery((rows) =>
+                      rows.map((row) => (row.id === item.id ? { ...row, altText: e.target.value } : row))
+                    )
                   }
                   placeholder="Alt text"
                   className={fieldClass}
@@ -266,7 +382,7 @@ export default function EventForm({ mode, event, canWrite }: EventFormProps) {
                 <button
                   type="button"
                   className="text-xs text-white/50"
-                  onClick={() => setGallery((rows) => rows.filter((_, i) => i !== index))}
+                  onClick={() => setGallery((rows) => rows.filter((row) => row.id !== item.id))}
                 >
                   Remove
                 </button>
@@ -276,10 +392,17 @@ export default function EventForm({ mode, event, canWrite }: EventFormProps) {
           <button
             type="button"
             className="mt-3 text-sm text-[#f1328b]"
-            onClick={() => setGallery((rows) => [...rows, { url: '', altText: '' }])}
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={galleryUploading}
           >
-            + Add gallery image
+            Add images
           </button>
+          {galleryUploading ? <p className="mt-2 text-sm text-white/55">Uploading...</p> : null}
+          {galleryError ? (
+            <p className="mt-2 text-sm text-red-200" role="alert">
+              {galleryError}
+            </p>
+          ) : null}
         </div>
       </fieldset>
 
@@ -392,9 +515,10 @@ export default function EventForm({ mode, event, canWrite }: EventFormProps) {
       {canWrite ? (
         <button
           type="submit"
-          className="rounded-full bg-gradient-to-r from-[#693492] to-[#f1328b] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white"
+          disabled={uploadPending}
+          className="rounded-full bg-gradient-to-r from-[#693492] to-[#f1328b] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
         >
-          {mode === 'create' ? 'Save draft' : 'Save changes'}
+          {uploadPending ? 'Uploading images…' : mode === 'create' ? 'Save draft' : 'Save changes'}
         </button>
       ) : (
         <p className="text-sm text-white/50">You have read-only access to events.</p>

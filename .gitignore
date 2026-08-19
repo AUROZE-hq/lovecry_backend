@@ -36,6 +36,10 @@ yarn-error.log*
 # donation artifacts
 .data/
 
+# temporary local event image uploads
+/public/uploads/events/*
+!/public/uploads/events/.gitkeep
+
 # vercel
 .vercel
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cartCount, mergeCartItem, parseStoredCart } from '@/lib/marketplace/cart';
 import { formatMarketplacePrice } from '@/lib/marketplace/display';
-import { parsePriceToCents, marketplaceProductWriteSchema } from '@/lib/marketplace/schemas';
+import { parsePriceToCents, marketplaceProductWriteSchema, centsToPriceInput } from '@/lib/marketplace/schemas';
 import { roleHasPermission } from '@/lib/auth/permissions';
 import type { MarketplaceCartItem } from '@/lib/marketplace/types';
 
@@ -50,6 +50,12 @@ describe('marketplace validation', () => {
     expect(parsePriceToCents('')).toBeNull();
     expect(parsePriceToCents('28.00')).toBe(2800);
     expect(parsePriceToCents('-1')).toBe(-100);
+  });
+
+  it('converts cents back to a dollar input value', () => {
+    expect(centsToPriceInput(null)).toBe('');
+    expect(centsToPriceInput(2999)).toBe('29.99');
+    expect(centsToPriceInput(2800)).toBe('28.00');
   });
 
   it('requires name, slug, description, images, and a size', () => {

@@ -18,6 +18,11 @@ export function parsePriceToCents(value: unknown): number | null {
   return Math.round(amount * 100);
 }
 
+export function centsToPriceInput(cents: number | null | undefined): string {
+  if (cents == null) return '';
+  return (cents / 100).toFixed(2);
+}
+
 const imageUrlSchema = z
   .string()
   .trim()
@@ -51,7 +56,7 @@ export const marketplaceProductWriteSchema = z.object({
   sizes: z
     .array(z.enum(MARKETPLACE_SIZE_OPTIONS))
     .min(1, 'Select at least one size'),
-  status: z.enum(['DRAFT', 'PUBLISHED']),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']),
   featured: z.boolean().default(false),
   inStock: z.boolean().default(true),
   messageEyebrow: optionalText,

@@ -68,7 +68,7 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
                 <th className="px-4 py-3">Price</th>
                 <th className="px-4 py-3">Featured</th>
                 <th className="px-4 py-3">Updated</th>
-                <th className="px-4 py-3">Preview</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -84,13 +84,18 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
                   <td className="px-4 py-3">{product.featured ? 'Yes' : 'No'}</td>
                   <td className="px-4 py-3 text-xs text-white/45">{product.updatedAt.toISOString().slice(0, 10)}</td>
                   <td className="px-4 py-3">
-                    {product.status === 'PUBLISHED' ? (
-                      <Link href={`/marketplace/${product.slug}`} className="text-[#f1328b] hover:underline" target="_blank">
-                        Preview
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Link href={`/admin/marketplace/${product.id}/edit`} className="text-[#f1328b] hover:underline">
+                        Edit
                       </Link>
-                    ) : (
-                      <span className="text-white/35">Draft</span>
-                    )}
+                      {product.status === 'PUBLISHED' ? (
+                        <Link href={`/marketplace/${product.slug}`} className="text-white/70 hover:underline" target="_blank">
+                          Preview
+                        </Link>
+                      ) : (
+                        <span className="text-white/35">Draft</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

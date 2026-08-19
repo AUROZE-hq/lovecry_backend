@@ -38,7 +38,7 @@ export default async function NewMarketplaceProductPage({ searchParams }: { sear
         {!canWrite ? (
           <p className="mt-6 text-sm text-white/50">You do not have permission to add marketplace products.</p>
         ) : (
-          <MarketplaceProductForm canWrite={canWrite} />
+          <MarketplaceProductForm mode="create" canWrite={canWrite} />
         )}
       </div>
     </main>

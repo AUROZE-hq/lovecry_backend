@@ -1,10 +1,12 @@
 /**
- * Event images are stored as URLs selected by admins:
- * - site-relative paths such as `/event (1).jpg` (files already in /public)
+ * Event images are stored as URLs:
+ * - site-relative paths such as `/uploads/events/{id}.webp` (admin-uploaded files in /public)
+ * - existing public files such as `/event (1).jpg`
  * - https:// URLs to durable hosts the organization already uses
  *
- * There is no Cloudinary, S3, or UploadThing provider in this project.
- * Do not write production uploads to the Next.js server filesystem.
+ * Admin uploads are handled by `/api/admin/events/upload` and currently written
+ * to `/public/uploads/events`. The database stores only the public URL so a later
+ * file-server/cloud storage swap does not require a schema change.
  */
 
 export function isAllowedImageUrl(url: string): boolean {

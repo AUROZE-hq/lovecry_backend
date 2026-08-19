@@ -39,6 +39,7 @@ describe('event slug', () => {
 describe('media URLs', () => {
   it('allows site paths and https images', () => {
     expect(isAllowedImageUrl('/event-1.jpg')).toBe(true);
+    expect(isAllowedImageUrl('/uploads/events/a18dc982-f13d-4b81-a882-a037e4d52870.webp')).toBe(true);
     expect(isAllowedImageUrl('https://cdn.example.com/photo.jpg')).toBe(true);
     expect(isAllowedImageUrl('http://cdn.example.com/photo.jpg')).toBe(false);
     expect(isAllowedImageUrl('javascript:alert(1)')).toBe(false);
