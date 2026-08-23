@@ -221,7 +221,7 @@ export default function MarketplaceLanding({ products, featuredProduct }: Props)
                         </span>
                       </div>
 
-                      <div className="relative mb-8 aspect-[4/5] overflow-hidden rounded-[3rem] border border-white/10 bg-[#ececec] transition-all duration-700 group-hover:shadow-[0_40px_100px_rgba(241,50,139,0.12)]">
+                      <div className="relative mb-8 aspect-[4/5] overflow-hidden rounded-[3rem] border border-white/10 bg-white transition-all duration-700 group-hover:shadow-[0_40px_100px_rgba(241,50,139,0.12)]">
                         {image ? (
                           <Image
                             src={image.url}
