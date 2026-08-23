@@ -139,7 +139,7 @@ export default function MarketplaceLanding({ products, featuredProduct }: Props)
                   alt="LoveCry featured Marketplace product"
                   fill
                   priority
-                  className="object-contain p-6 transition-transform duration-700 group-hover:scale-105"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                   sizes="(max-width: 1024px) 100vw, 40vw"
                 />
               </div>
@@ -157,10 +157,6 @@ export default function MarketplaceLanding({ products, featuredProduct }: Props)
                   </Link>
                 </motion.div>
               ) : null}
-
-              <div className="absolute top-1/2 -right-8 hidden -translate-y-1/2 rounded-l-2xl bg-[#693492] px-4 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white [writing-mode:vertical-rl] lg:block">
-                Purpose with every product
-              </div>
             </motion.div>
           </div>
         </section>
