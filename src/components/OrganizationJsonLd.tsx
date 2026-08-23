@@ -11,7 +11,7 @@ export default function OrganizationJsonLd() {
     email: orgInfo.email,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: '150 Cosburn Ave.',
+      streetAddress: '150, Cosburn Ave.',
       addressLocality: 'East York',
       addressRegion: 'ON',
       postalCode: 'M4J 2L9',

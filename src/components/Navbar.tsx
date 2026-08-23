@@ -138,7 +138,7 @@ export default function Navbar() {
         duration: hiddenForIntro ? 0 : 0.95,
         ease: [0.16, 1, 0.3, 1],
       }}
-      className="site-header-gradient fixed top-0 left-0 right-0 z-50 pointer-events-none shadow-[0_4px_24px_rgba(76,29,111,0.35)]"
+      className="site-header-gradient site-header-gradient-animated fixed top-0 left-0 right-0 z-50 pointer-events-none shadow-[0_4px_24px_rgba(76,29,111,0.35)]"
     >
       <nav className="pointer-events-auto relative w-full border-b border-white/15 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-x-0 top-0 h-px bg-white/25" aria-hidden />
@@ -211,11 +211,11 @@ export default function Navbar() {
         <div className="hidden lg:flex items-center shrink-0">
           <Link
             href="/marketplace"
-            className="relative text-white/90 hover:text-white p-2 transition-colors group/cart"
+            className="relative text-white/90 hover:text-white p-2.5 transition-colors group/cart"
             aria-label={`Marketplace cart, ${cartCount} items`}
           >
-            <ShoppingCart className="w-4 h-4 group-hover/cart:text-[#f1328b] transition-colors" />
-            <span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-0.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[8px] font-black flex items-center justify-center border border-black/20">
+            <ShoppingCart className="w-6 h-6 group-hover/cart:text-[#f1328b] transition-colors" strokeWidth={2} />
+            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[9px] font-black flex items-center justify-center border border-black/20">
               {cartCount}
             </span>
           </Link>
@@ -224,11 +224,11 @@ export default function Navbar() {
         <div className="flex items-center gap-1 lg:hidden shrink-0">
           <Link
             href="/marketplace"
-            className="relative text-white/90 hover:text-white p-2 transition-colors"
+            className="relative text-white/90 hover:text-white p-2.5 transition-colors"
             aria-label={`Marketplace cart, ${cartCount} items`}
           >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-0.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[8px] font-black flex items-center justify-center border border-black/20">
+            <ShoppingCart className="w-6 h-6" strokeWidth={2} />
+            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 bg-gradient-to-br from-[#f1328b] to-[#693492] text-white rounded-full text-[9px] font-black flex items-center justify-center border border-black/20">
               {cartCount}
             </span>
           </Link>
