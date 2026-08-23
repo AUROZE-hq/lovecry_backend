@@ -82,9 +82,6 @@ export default function MarketplaceLanding({ products, featuredProduct }: Props)
         </motion.div>
         <div className="absolute right-[-10%] top-[-10%] h-[600px] w-[600px] rounded-full bg-[#693492]/15 blur-[120px]" />
         <div className="absolute bottom-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-[#f1328b]/10 blur-[120px]" />
-        <div className="absolute left-10 top-40 hidden font-mono text-[10px] uppercase tracking-widest text-white/20 lg:block">
-          Sec_Alpha / 34.0921N
-        </div>
         <div className="absolute bottom-40 right-10 hidden font-mono text-[10px] uppercase tracking-widest text-white/20 lg:block">
           Impact_Node / 118.2437W
         </div>
