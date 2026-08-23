@@ -113,12 +113,12 @@ export default function EventsSection() {
       // Animate Persistent Text (Label + Title)
       const persistentText = persistentTextRef.current;
       if (persistentText) {
-        const textOffsets = getTargetOffsets(persistentText, -50); // Shift up in card
+        const textOffsets = getTargetOffsets(persistentText, -35);
         scroll(
           animate(persistentText, {
             x: [0, textOffsets.x],
             y: [0, textOffsets.y],
-            scale: [1, 0.42], // Slightly larger for better readability
+            scale: [1, 0.3],
             opacity: [1, 1]
           } as any, {
             x: { ease: cubicBezier(0.65, 0, 0.35, 1) },
@@ -130,12 +130,12 @@ export default function EventsSection() {
       }
 
       // Animate Explore Button
-      const buttonOffsets = getTargetOffsets(exploreButton, 80); // Shift down in card
+      const buttonOffsets = getTargetOffsets(exploreButton, 65);
       scroll(
         animate(exploreButton, {
           x: [0, buttonOffsets.x],
           y: [0, buttonOffsets.y],
-          scale: [1, 0.52], // Larger, more prominent CTA
+          scale: [1, 0.4],
           opacity: [1, 1]
         } as any, {
           x: { ease: cubicBezier(0.65, 0, 0.35, 1) },
@@ -297,6 +297,13 @@ export default function EventsSection() {
           grid-area: 2 / calc(3 + var(--offset));
           position: relative;
           z-index: 5;
+          width: 82%;
+          max-width: 250px;
+          justify-self: center;
+          align-self: center;
+          aspect-ratio: 4 / 5;
+          overflow: hidden;
+          border-radius: 1rem;
         }
 
         .events-section-wrapper .events-scaler img {
@@ -309,8 +316,10 @@ export default function EventsSection() {
           object-fit: cover;
           border-radius: 1rem;
           max-width: none;
-          min-width: 320px;
-          min-height: 400px;
+        }
+
+        .events-section-wrapper .events-scaler-persistent-text {
+          transform-origin: center center;
         }
 
         .events-section-wrapper .events-scaler-content {
@@ -487,11 +496,12 @@ export default function EventsSection() {
                     <div ref={backgroundRef} className="events-scaler-bg" />
                     <div className="w-full max-w-7xl mx-auto px-6 h-full flex flex-col items-start justify-start pt-[5vh]">
                       <div ref={staticContentRef} className="flex flex-col items-start w-full">
-                        <div ref={persistentTextRef} className="flex flex-col items-start">
+                        <div ref={persistentTextRef} className="events-scaler-persistent-text flex flex-col items-start">
                           <span className="events-scaler-label">Our Events</span>
                           <h2 className="events-scaler-title">
-                            Moments of <span className="italic">Healing</span>, <br />
-                            <span className="italic">Growth</span>, and <span className="italic">Connection</span>
+                            Moments of<br />
+                            <span className="italic">Healing</span>, <span className="italic">Growth</span>,<br />
+                            and <span className="italic">Connection</span>
                           </h2>
                         </div>
                         <div ref={subtextRef}>
