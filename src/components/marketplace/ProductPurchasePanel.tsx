@@ -49,6 +49,7 @@ export default function ProductPurchasePanel({ product }: { product: Marketplace
       {product.subtitle ? <p className="mt-2 text-lg text-white/80">{product.subtitle}</p> : null}
       <p className="mt-4 text-2xl font-bold text-white">
         {formatMarketplacePrice(product.priceCents, product.currency)}
+        <span className="ml-2 text-sm font-medium text-white/45">+ (tax + shipping and handling)</span>
       </p>
       <p className="mt-4 text-sm leading-relaxed text-white/70">{product.description}</p>
 
