@@ -9,7 +9,7 @@ import { orgInfo } from '@/lib/org-info';
 export default function TransparencyContent() {
   return (
     <section id="transparency-governance" className="scroll-mt-28">
-      <section className="relative bg-gradient-to-r from-[#693492] via-[#9a3d8f] to-[#f1328b] px-6 pb-16 pt-28 text-center sm:pb-20 sm:pt-32">
+      <section className="relative bg-[#050505] px-6 pb-16 pt-28 text-center sm:pb-20 sm:pt-32">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
