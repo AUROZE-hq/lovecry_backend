@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function BoardPage() {
-  redirect('/about#board');
+  redirect('/about#ceo');
 }

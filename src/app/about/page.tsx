@@ -7,7 +7,6 @@ import {
   Sparkles,
   Heart,
 } from 'lucide-react';
-import BoardSection from '@/components/about/BoardSection';
 import TransparencyContent from '@/components/about/TransparencyContent';
 import { orgInfo } from '@/lib/org-info';
 
@@ -198,6 +197,55 @@ export default function AboutPage() {
             </motion.div>
 
           </div>
+
+          <div className="mt-20 grid gap-12 border-t border-white/5 pt-20 lg:mt-24 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-12 lg:pt-24">
+            {/* Director Image — left */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              className="relative mx-auto w-full max-w-md lg:max-w-lg"
+            >
+              <div className="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-br from-[#f1328b]/20 to-[#693492]/20 blur-3xl opacity-50" />
+
+              <div className="group relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0a0a0a] shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
+                <Image
+                  src="/NeshaMohammed.png"
+                  alt="Nesha Mohammed, Director of LoveCry"
+                  width={800}
+                  height={1000}
+                  className="h-auto w-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
+                  unoptimized
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
+              </div>
+            </motion.div>
+
+            {/* Director Text Area — right */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
+              className="max-w-2xl"
+            >
+              <h2 className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">Director</h2>
+
+              <div className="mt-6 border-l-2 border-[#f1328b] pl-5">
+                <p className="text-xl font-bold text-white">Nesha Mohammed</p>
+                <p className="mt-1 text-sm font-medium text-white/60">Director</p>
+              </div>
+
+              <div className="mt-10 space-y-6 text-base leading-relaxed text-white/70">
+                <p>
+                  Nesha Mohammed provides governance oversight and organizational leadership in support of
+                  LoveCry&apos;s charitable mission and community programs.
+                </p>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -376,7 +424,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <BoardSection />
       <TransparencyContent />
 
       <motion.section 
