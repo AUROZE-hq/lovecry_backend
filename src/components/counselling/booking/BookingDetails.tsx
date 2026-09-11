@@ -67,7 +67,7 @@ export default function BookingDetails({
   onConfirm,
 }: Props) {
   const duration = service?.durationMinutes || boot.settings.durationMinutes;
-  const counsellor = boot.counsellor.displayName;
+  const counsellor = counsellorNameWithoutCredentials(boot.counsellor.displayName);
   const credentials = formatCredentialLine(orgInfo.ceoCredentials);
   const timeRange = formatDisplayTimeRange(slot.startTimeUtc, slot.endTimeUtc, boot.settings.timeZone);
   const compactRange = `${formatCompactClockTime(slot.startTimeUtc, boot.settings.timeZone)}–${formatClockTime(slot.endTimeUtc, boot.settings.timeZone)}`;

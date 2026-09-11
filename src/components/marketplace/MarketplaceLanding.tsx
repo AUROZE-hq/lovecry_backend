@@ -112,18 +112,10 @@ export default function MarketplaceLanding({ products, featuredProduct }: Props)
                   Impact
                 </span>
               </h1>
-              <div className="flex items-end gap-12">
-                <p className="max-w-[300px] text-sm font-medium leading-relaxed text-white/55 md:text-base">
-                  Every product carries purpose. Explore LoveCry collections created to support children, families,
-                  community programs, and meaningful change.
-                </p>
-                <motion.div
-                  initial={reduceMotion ? false : { width: 0 }}
-                  animate={{ width: 100 }}
-                  transition={{ delay: 0.5, duration: 1 }}
-                  className="mb-2 h-px bg-white/70"
-                />
-              </div>
+              <p className="max-w-[300px] text-sm font-medium leading-relaxed text-white/55 md:text-base">
+                Every product carries purpose. Explore LoveCry collections created to support children, families,
+                community programs, and meaningful change.
+              </p>
             </motion.div>
 
             <motion.div

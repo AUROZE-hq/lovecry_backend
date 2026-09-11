@@ -38,8 +38,8 @@ const exploreLinks = orgInfo.navLinks;
 const supportLinks = [
   { label: 'Donate', href: '/donate' },
   { label: 'Volunteer', href: '/contact#support-options' },
+  { label: 'Member', href: '/member' },
   { label: 'Contact', href: '/contact' },
-  { label: 'Transparency & Governance', href: '/about#transparency-governance' },
 ];
 
 const centerSocialLinks = [

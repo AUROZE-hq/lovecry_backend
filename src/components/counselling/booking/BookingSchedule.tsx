@@ -1,9 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   buildCalendarGrid,
-  counsellorInitials,
+  counsellorNameWithoutCredentials,
   formatClockTime,
   formatCompactClockTime,
   formatCredentialLine,
@@ -58,9 +59,8 @@ export default function BookingSchedule({
   const cells = buildCalendarGrid(viewYear, viewMonth, available);
   const duration = service?.durationMinutes || boot.settings.durationMinutes;
   const serviceLabel = formatServiceLabel(service?.name || 'Individual counselling');
-  const counsellor = boot.counsellor.displayName;
+  const counsellor = counsellorNameWithoutCredentials(boot.counsellor.displayName);
   const credentials = formatCredentialLine(orgInfo.ceoCredentials);
-  const initials = counsellorInitials(counsellor);
 
   function shiftMonth(delta: number) {
     const date = new Date(Date.UTC(viewYear, viewMonth - 1 + delta, 1));
@@ -96,11 +96,15 @@ export default function BookingSchedule({
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-[#f1328b] text-sm font-bold tracking-wide text-white"
-                aria-hidden
-              >
-                {initials}
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-[#f1328b]">
+                <Image
+                  src={orgInfo.ceoPhoto}
+                  alt={counsellor}
+                  fill
+                  className="object-cover"
+                  sizes="56px"
+                  unoptimized
+                />
               </div>
               <div>
                 <p className="font-semibold text-white">{counsellor}</p>

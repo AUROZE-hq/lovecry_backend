@@ -61,7 +61,7 @@ async function seedOnce(): Promise<void> {
     where: { email: 'counselling@lovecry.ca' },
     create: {
       id: 'counsellor-default',
-      displayName: 'LoveCry Counsellor',
+      displayName: 'Jesse Wilson',
       email: 'counselling@lovecry.ca',
       timeZone: counsellingEnv.timeZone,
       active: true,
@@ -71,6 +71,7 @@ async function seedOnce(): Promise<void> {
       bufferAfterMinutes: counsellingEnv.bufferAfterMinutes,
     },
     update: {
+      displayName: 'Jesse Wilson',
       active: true,
       googleCalendarId: counsellingEnv.google.counsellingCalendarId || undefined,
     },

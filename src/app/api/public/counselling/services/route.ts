@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { listServices, getSettings, getCounsellor, getActiveConsentTemplate } from '@/lib/counselling/store';
+import { counsellorNameWithoutCredentials } from '@/lib/counselling/display';
 import { getGoogleStatus } from '@/lib/google/calendar';
+import { orgInfo } from '@/lib/org-info';
 
 export async function GET() {
   const [services, settings, counsellor, template] = await Promise.all([
@@ -9,6 +11,11 @@ export async function GET() {
     getCounsellor(),
     getActiveConsentTemplate(),
   ]);
+
+  const displayName =
+    counsellor.displayName === 'LoveCry Counsellor'
+      ? counsellorNameWithoutCredentials(orgInfo.ceoName)
+      : counsellor.displayName;
 
   return NextResponse.json({
     services,
@@ -23,7 +30,7 @@ export async function GET() {
       holdMinutes: settings.holdMinutes,
     },
     counsellor: {
-      displayName: counsellor.displayName,
+      displayName,
     },
     consent: template
       ? {

@@ -26,7 +26,7 @@ export const orgInfo = {
   emailHref: 'mailto:jwilson@lovecry.ca',
   website: 'www.LoveCry.ca',
   websiteHref: 'https://www.LoveCry.ca',
-  address: '150, Cosburn Ave. East York, ON M4J 2L9',
+  address: '150, Cosburn Ave, East York, ON M4J 2L9',
   social: {
     facebook: 'https://www.facebook.com/LoveCryWellness',
     linkedin: 'https://www.linkedin.com/in/jesse-wilson-94555b161/',
@@ -46,6 +46,7 @@ export const orgInfo = {
   ceoName: 'Jesse Wilson, RSW',
   ceoRole: 'Chief Executive Officer',
   ceoCredentials: 'Registered Social Worker | CCTP (I-II)',
+  ceoPhoto: '/aboutceo.avif',
   contactPrompt:
     'For volunteering, mentorship, donations, partnerships, counselling, program inquiries, or general support, please contact LoveCry The Street Kids Organization.',
   initiatives: [

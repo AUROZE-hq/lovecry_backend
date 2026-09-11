@@ -46,7 +46,7 @@ export function mapSettings(row: BookingSettings): BookingSettingsRecord {
 export function mapCounsellor(row: Counsellor): CounsellorRecord {
   return {
     id: row.id,
-    displayName: row.displayName,
+    displayName: row.displayName === 'LoveCry Counsellor' ? 'Jesse Wilson' : row.displayName,
     email: row.email,
     phone: row.phone ?? undefined,
     timeZone: row.timeZone,
