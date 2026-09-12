@@ -60,14 +60,27 @@ const centerSocialLinks = [
 const contactLinks = [
   { label: 'Phone', value: orgInfo.phone, href: orgInfo.phoneHref, icon: Phone },
   { label: 'Email', value: orgInfo.email.toLowerCase(), href: orgInfo.emailHref, icon: Mail },
-  { label: 'Website', value: orgInfo.website.toLowerCase(), href: orgInfo.websiteHref, icon: Globe },
+  {
+    label: 'Website',
+    value: orgInfo.website.toLowerCase(),
+    href: orgInfo.websiteHref,
+    icon: Globe,
+    external: true,
+  },
   {
     label: 'Address',
     value: orgInfo.address,
     href: `https://maps.google.com/?q=${encodeURIComponent(orgInfo.address)}`,
     icon: MapPin,
+    external: true,
   },
-  { label: 'Charity Number', value: orgInfo.charityNumber, href: '/contact', icon: Building2 },
+  {
+    label: 'Charity Number',
+    value: orgInfo.charityNumber,
+    href: orgInfo.charityNumberHref,
+    icon: Building2,
+    external: true,
+  },
 ];
 
 export default function Footer() {
@@ -134,7 +147,15 @@ export default function Footer() {
               Registered Canadian Charity
             </p>
             <p className="mt-1 text-[11px] text-white/45">
-              CRA Charity Number: {orgInfo.charityNumber}
+              CRA Charity Number:{' '}
+              <a
+                href={orgInfo.charityNumberHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#60a5fa] underline underline-offset-2 transition hover:text-[#93c5fd]"
+              >
+                {orgInfo.charityNumber}
+              </a>
             </p>
 
             <p className="mt-5 max-w-xs text-sm italic leading-relaxed text-white/50 sm:max-w-sm">
@@ -196,6 +217,9 @@ export default function Footer() {
               <motion.a
                 key={item.label}
                 href={item.href}
+                {...('external' in item && item.external
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

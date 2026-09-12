@@ -62,7 +62,15 @@ export default function AboutSection() {
               </span>
             </div>
             <div className="text-white/70 text-[10px] sm:text-[11px] md:text-xs font-semibold uppercase tracking-wider leading-relaxed pl-6 sm:pl-6">
-              Registered Canadian Charity · CRA Charity Number: {orgInfo.charityNumber}
+              Registered Canadian Charity · CRA Charity Number:{' '}
+              <a
+                href={orgInfo.charityNumberHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="normal-case tracking-normal text-[#60a5fa] underline underline-offset-2 transition hover:text-[#93c5fd]"
+              >
+                {orgInfo.charityNumber}
+              </a>
             </div>
           </motion.div>
           
@@ -113,7 +121,16 @@ export default function AboutSection() {
               </div>
               <div>
                 <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/45">CRA Charity Number</dt>
-                <dd className="mt-1 font-semibold text-white/90">{orgInfo.charityNumber}</dd>
+                <dd className="mt-1 font-semibold text-white/90">
+                  <a
+                    href={orgInfo.charityNumberHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#60a5fa] underline underline-offset-2 transition hover:text-[#93c5fd]"
+                  >
+                    {orgInfo.charityNumber}
+                  </a>
+                </dd>
               </div>
             </dl>
             <p className="mt-4 text-sm leading-relaxed text-white/60">{orgInfo.craCardSupportingText}</p>

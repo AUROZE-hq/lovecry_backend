@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, MapPin, Phone, Send, Heart } from "lucide-react";
+import { CheckCircle2, Mail, MapPin, Phone, Send, Heart } from "lucide-react";
 import { orgInfo } from "@/lib/org-info";
 
 const inputClassName =
@@ -11,8 +12,64 @@ const inputClassName =
 
 const labelClassName = "block text-sm font-semibold tracking-wide text-white";
 
+type FormState = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  subject: string;
+  message: string;
+  company: string;
+};
+
+const emptyForm: FormState = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  subject: "",
+  message: "",
+  company: "",
+};
+
 export default function ContactPage() {
   const mapQuery = encodeURIComponent(orgInfo.address);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [sending, setSending] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSending(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; error?: string }
+        | null;
+
+      if (!res.ok || !data?.ok) {
+        setError(data?.error || "Could not send your message. Please try again.");
+        return;
+      }
+
+      setSuccess(data.message || "Message sent.");
+      setForm(emptyForm);
+    } catch {
+      setError("Could not send your message. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
@@ -81,42 +138,108 @@ export default function ContactPage() {
               </a>
             </div>
 
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="mt-10 space-y-6"
-              aria-label="Contact form"
-            >
+            <form onSubmit={onSubmit} className="mt-10 space-y-6" aria-label="Contact form">
+              {success && (
+                <div
+                  role="status"
+                  className="flex items-start gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100"
+                >
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-bold">Message sent</p>
+                    <p className="mt-1 text-emerald-100/85">{success}</p>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-2xl border border-red-400/40 bg-red-400/10 px-4 py-3 text-sm text-red-100"
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* Honeypot — hidden from real users */}
+              <label className="absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
+                Company
+                <input
+                  name="company"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={form.company}
+                  onChange={(e) => updateField("company", e.target.value)}
+                />
+              </label>
+
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <label className={labelClassName}>
                   First Name *
-                  <input name="firstName" required aria-required className={inputClassName} />
+                  <input
+                    name="firstName"
+                    required
+                    aria-required
+                    value={form.firstName}
+                    onChange={(e) => updateField("firstName", e.target.value)}
+                    className={inputClassName}
+                  />
                 </label>
                 <label className={labelClassName}>
                   Last Name *
-                  <input name="lastName" required aria-required className={inputClassName} />
+                  <input
+                    name="lastName"
+                    required
+                    aria-required
+                    value={form.lastName}
+                    onChange={(e) => updateField("lastName", e.target.value)}
+                    className={inputClassName}
+                  />
                 </label>
               </div>
 
               <label className={labelClassName}>
                 Email *
-                <input name="email" type="email" required aria-required className={inputClassName} />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  aria-required
+                  value={form.email}
+                  onChange={(e) => updateField("email", e.target.value)}
+                  className={inputClassName}
+                />
               </label>
 
               <label className={labelClassName}>
                 Subject
-                <input name="subject" className={inputClassName} />
+                <input
+                  name="subject"
+                  value={form.subject}
+                  onChange={(e) => updateField("subject", e.target.value)}
+                  className={inputClassName}
+                />
               </label>
 
               <label className={labelClassName}>
-                Type Your Message Here
-                <textarea name="message" rows={5} className={`${inputClassName} resize-none`} />
+                Type Your Message Here *
+                <textarea
+                  name="message"
+                  rows={5}
+                  required
+                  aria-required
+                  value={form.message}
+                  onChange={(e) => updateField("message", e.target.value)}
+                  className={`${inputClassName} resize-none`}
+                />
               </label>
 
               <button
                 type="submit"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#693492] to-[#f1328b] px-8 py-3.5 text-sm font-bold text-white shadow-lg transition hover:opacity-90"
+                disabled={sending}
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#693492] to-[#f1328b] px-8 py-3.5 text-sm font-bold text-white shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Send
+                {sending ? "Sending…" : "Send"}
                 <Send className="h-4 w-4" />
               </button>
             </form>

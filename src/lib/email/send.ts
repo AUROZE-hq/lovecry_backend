@@ -9,6 +9,8 @@ export type OutboundEmail = {
   subject: string;
   html: string;
   text: string;
+  /** Overrides EMAIL_REPLY_TO when set (e.g. contact form submitter). */
+  replyTo?: string;
 };
 
 export type EmailDeliveryStatus = 'SENT' | 'FAILED' | 'SKIPPED';
@@ -46,18 +48,25 @@ export async function deliverEmail(email: OutboundEmail): Promise<EmailDeliveryS
         body: JSON.stringify({
           from,
           to: [email.to],
-          reply_to: donationEnv.email.replyTo || undefined,
+          reply_to: email.replyTo || donationEnv.email.replyTo || undefined,
           subject: email.subject,
           html: email.html,
           text: email.text,
         }),
       });
       if (!res.ok) {
+        const providerBody = await res.text().catch(() => '');
         logWarn('email_send_failed', {
           action: 'send',
           status: res.status,
           errorCode: 'RESEND_FAILED',
+          message: providerBody.slice(0, 300),
         });
+        // Local/dev: keep a copy in the outbox so flows remain testable when Resend rejects.
+        if (donationEnv.appEnv !== 'production' && process.env.NODE_ENV !== 'production') {
+          outbox().unshift(email);
+          return 'SKIPPED';
+        }
         return 'FAILED';
       }
       logInfo('email_sent', { action: 'send', status: 'SENT', integration: 'resend' });

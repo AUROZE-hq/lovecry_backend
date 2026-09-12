@@ -77,7 +77,15 @@ export default function DonateExperience({ defaultEmbedUrl, receiptNotice }: Don
           </li>
           <li className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#f1328b]" />
-            Charity No. {orgInfo.charityNumber}
+            Charity No.{' '}
+            <a
+              href={orgInfo.charityNumberHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#60a5fa] underline underline-offset-2 transition hover:text-[#93c5fd]"
+            >
+              {orgInfo.charityNumber}
+            </a>
           </li>
         </ul>
 

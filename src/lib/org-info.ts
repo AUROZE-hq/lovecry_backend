@@ -20,6 +20,8 @@ export const orgInfo = {
   tagline: 'Healing, empowerment, and advocacy for youth and families.',
   type: 'Grassroots, community-led registered Canadian charity / non-profit organization',
   charityNumber: '892528365RR0001',
+  charityNumberHref:
+    'https://apps.cra-arc.gc.ca/ebci/hacc/srch/pub/dtldBscSrch?q.srchNmFltr=Lovecry',
   phone: '+1 641 938 6440',
   phoneHref: 'tel:+16419386440',
   email: 'jwilson@lovecry.ca',
