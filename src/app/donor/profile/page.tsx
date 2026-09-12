@@ -1,17 +1,8 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { DONOR_COOKIE } from '@/lib/auth/donor-gate';
-import { getDonorPreferences } from '@/lib/members/store';
-import { listDonations } from '@/lib/donations/store';
-import PortalShell from '@/components/portals/PortalShell';
+import { getAuthenticatedDonor } from '@/lib/auth/donor-gate';
+import { prisma } from '@/lib/db/prisma';
+import PortalShell, { DONOR_PORTAL_NAV } from '@/components/portals/PortalShell';
 import { logoutDonor, saveDonorPreferencesAction } from '@/app/portals/actions';
-
-const nav = [
-  { href: '/donor/donations', label: 'History' },
-  { href: '/donor/monthly', label: 'Monthly giving' },
-  { href: '/donor/receipts', label: 'Receipts' },
-  { href: '/donor/profile', label: 'Profile' },
-];
 
 export const metadata = { title: 'Donor Profile | LoveCry' };
 
@@ -22,22 +13,24 @@ export default async function DonorProfilePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const email = (await cookies()).get(DONOR_COOKIE)?.value;
-  if (!email) redirect('/donor');
+  const donor = await getAuthenticatedDonor();
+  if (!donor) redirect('/donor');
 
-  const prefs = getDonorPreferences(email);
-  const latest = (await listDonations()).find(
-    (d) => d.email?.toLowerCase() === email.toLowerCase()
-  );
+  const row = await prisma.donor.findUnique({ where: { id: donor.id } });
+  if (!row) redirect('/donor');
+
   const params = await searchParams;
   const saved = params.saved === '1';
+  const name = [row.firstName, row.lastName].filter(Boolean).join(' ') || 'Donor';
 
   return (
     <PortalShell
-      title="Profile & preferences"
-      subtitle="Donor Portal"
-      email={email}
-      nav={nav}
+      title="Profile"
+      subtitle="Update your contact preferences."
+      email={donor.email}
+      displayName={name}
+      nav={DONOR_PORTAL_NAV}
+      activeHref="/donor/profile"
       logoutAction={logoutDonor}
     >
       {saved && (
@@ -46,13 +39,16 @@ export default async function DonorProfilePage({
         </p>
       )}
 
-      <form action={saveDonorPreferencesAction} className="max-w-xl space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+      <form
+        action={saveDonorPreferencesAction}
+        className="max-w-xl space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6"
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm text-white/60">
             First name
             <input
               name="firstName"
-              defaultValue={prefs?.firstName || latest?.firstName || ''}
+              defaultValue={row.firstName || ''}
               className="mt-2 w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#f1328b]/50"
             />
           </label>
@@ -60,7 +56,7 @@ export default async function DonorProfilePage({
             Last name
             <input
               name="lastName"
-              defaultValue={prefs?.lastName || latest?.lastName || ''}
+              defaultValue={row.lastName || ''}
               className="mt-2 w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#f1328b]/50"
             />
           </label>
@@ -69,7 +65,7 @@ export default async function DonorProfilePage({
           Phone
           <input
             name="phone"
-            defaultValue={prefs?.phone || ''}
+            defaultValue={row.phone || ''}
             className="mt-2 w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#f1328b]/50"
           />
         </label>
@@ -77,14 +73,14 @@ export default async function DonorProfilePage({
           <input
             type="checkbox"
             name="marketingConsent"
-            defaultChecked={prefs?.marketingConsent || latest?.marketingConsent}
+            defaultChecked={row.marketingConsent}
             className="mt-1"
           />
           Send me LoveCry updates (optional)
         </label>
         <button
           type="submit"
-          className="rounded-full bg-gradient-to-r from-[#693492] to-[#f1328b] px-6 py-3 text-sm font-bold text-white"
+          className="rounded-full bg-[#f1328b] px-6 py-3 text-sm font-bold text-white"
         >
           Save preferences
         </button>

@@ -65,8 +65,8 @@ enum SyncStatus {
 }
 
 model Donor {
-  id                  String     @id @default(cuid())
-  zeffyContactId      String?    @unique
+  id                  String              @id @default(cuid())
+  zeffyContactId      String?             @unique
   email               String
   firstName           String?
   lastName            String?
@@ -76,15 +76,58 @@ model Donor {
   city                String?
   province            String?
   postalCode          String?
-  country             String     @default("CA")
-  anonymousPreference Boolean    @default(false)
-  marketingConsent    Boolean    @default(false)
+  country             String              @default("CA")
+  anonymousPreference Boolean             @default(false)
+  marketingConsent    Boolean             @default(false)
   consentTimestamp    DateTime?
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  /** scrypt password hash for portal login; null until portal activated */
+  passwordHash        String?
+  portalActivatedAt   DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   donations           Donation[]
+  sessions            DonorSession[]
+  authTokens          DonorAuthToken[]
+  recurringGifts      RecurringDonation[]
 
   @@index([email])
+}
+
+enum DonorAuthTokenPurpose {
+  ACTIVATION
+  MAGIC_LINK
+  PASSWORD_RESET
+}
+
+model DonorSession {
+  id        String    @id @default(cuid())
+  donorId   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?   @db.Text
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  donor     Donor     @relation(fields: [donorId], references: [id], onDelete: Cascade)
+
+  @@index([donorId, expiresAt])
+  @@index([expiresAt])
+}
+
+model DonorAuthToken {
+  id         String                @id @default(cuid())
+  donorId    String?
+  email      String
+  purpose    DonorAuthTokenPurpose
+  tokenHash  String                @unique
+  donationId String?
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime              @default(now())
+  donor      Donor?                @relation(fields: [donorId], references: [id], onDelete: Cascade)
+
+  @@index([email, purpose])
+  @@index([expiresAt])
 }
 
 model Campaign {
@@ -103,11 +146,13 @@ model Campaign {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   donations         Donation[]
+  recurringGifts    RecurringDonation[]
 }
 
 model Donation {
   id                         String              @id @default(cuid())
   localReference             String?             @unique
+  idempotencyKey             String?             @unique
   zeffyTransactionId         String?             @unique
   zeffyPaymentId             String?             @unique
   donorId                    String?
@@ -174,11 +219,16 @@ model RecurringDonation {
   currency              String    @default("CAD")
   frequency             String    @default("MONTHLY")
   status                String
+  paymentMethodMasked   String?
   startedAt             DateTime
   nextExpectedPaymentAt DateTime?
   cancelledAt           DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  donor                 Donor     @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  campaign              Campaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([donorId, status])
 }
 
 model DonationSyncEvent {

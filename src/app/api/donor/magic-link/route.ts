@@ -1,23 +1,37 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { DONOR_COOKIE } from '@/lib/auth/donor-gate';
+import { DonorAuthError, consumeDonorAuthToken } from '@/lib/auth/donor-gate';
 
-export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const parsed = z.object({ email: z.string().email() }).safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
+/**
+ * Legacy path removed: this route no longer sets an email cookie.
+ * Prefer /donor/auth/verify for token consumption.
+ */
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        'Email-only portal access has been removed. Use password activation or a secure emailed link.',
+    },
+    { status: 410 }
+  );
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token');
+  if (!token) {
+    return NextResponse.redirect(new URL('/donor?error=missing_token', url.origin));
   }
 
-  const jar = await cookies();
-  jar.set(DONOR_COOKIE, parsed.data.email.toLowerCase(), {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 60 * 60 * 6,
-  });
-
-  return NextResponse.json({ ok: true });
+  try {
+    await consumeDonorAuthToken(token, {
+      ip: request.headers.get('x-forwarded-for') || undefined,
+      ua: request.headers.get('user-agent') || undefined,
+    });
+    return NextResponse.redirect(new URL('/donor/donations', url.origin));
+  } catch (err) {
+    const message = err instanceof DonorAuthError ? err.message : 'invalid_token';
+    return NextResponse.redirect(
+      new URL(`/donor?error=${encodeURIComponent(message)}`, url.origin)
+    );
+  }
 }

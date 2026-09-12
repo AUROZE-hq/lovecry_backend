@@ -1,77 +1,100 @@
-import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { DONOR_COOKIE } from '@/lib/auth/donor-gate';
-import { listDonations, getReceiptByDonationId } from '@/lib/donations/store';
+import Link from 'next/link';
+import { getAuthenticatedDonor } from '@/lib/auth/donor-gate';
+import { getDonorPortalSummary } from '@/lib/donations/service';
 import { formatCadFromCents } from '@/lib/donations/campaigns';
-import PortalShell from '@/components/portals/PortalShell';
+import PortalShell, { DONOR_PORTAL_NAV } from '@/components/portals/PortalShell';
 import { logoutDonor } from '@/app/portals/actions';
 
-const nav = [
-  { href: '/donor/donations', label: 'History' },
-  { href: '/donor/monthly', label: 'Monthly giving' },
-  { href: '/donor/receipts', label: 'Receipts' },
-  { href: '/donor/profile', label: 'Profile' },
-];
-
-export const metadata = { title: 'Donation History | LoveCry' };
+export const metadata = { title: 'Giving History | LoveCry Donor Portal' };
 
 export default async function DonorDonationsPage() {
-  const email = (await cookies()).get(DONOR_COOKIE)?.value;
-  if (!email) redirect('/donor');
+  const donor = await getAuthenticatedDonor();
+  if (!donor) redirect('/donor');
 
-  const mine = (await listDonations()).filter(
-    (d) => d.email?.toLowerCase() === email.toLowerCase()
-  );
-  const mineWithReceipts = await Promise.all(
-    mine.map(async (d) => ({
-      donation: d,
-      receipt: await getReceiptByDonationId(d.id),
-    }))
-  );
+  const summary = await getDonorPortalSummary(donor.id);
+  const name = [donor.firstName, donor.lastName].filter(Boolean).join(' ') || 'Donor';
 
   return (
     <PortalShell
-      title="Your donations"
-      subtitle="Donor Portal"
-      email={email}
-      nav={nav}
+      title="Giving History"
+      subtitle="All of your LoveCry donations in one place."
+      email={donor.email}
+      displayName={name}
+      nav={DONOR_PORTAL_NAV}
+      activeHref="/donor/donations"
       logoutAction={logoutDonor}
     >
-      <ul className="space-y-3">
-        {mineWithReceipts.map(({ donation: d, receipt }) => {
-          return (
-            <li key={d.id} className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold">
-                    {formatCadFromCents(d.amountCents)}
-                    {d.frequency === 'MONTHLY' ? ' / month' : ''}
-                  </p>
-                  <p className="mt-1 text-sm text-white/55">{d.campaignName}</p>
-                  <p className="mt-1 text-xs text-white/40">
-                    {d.status} · {d.reference} · {new Date(d.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/50">
-                  {d.receiptStatus}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat label="Total given" value={formatCadFromCents(summary.stats.totalGivenCents)} />
+        <Stat
+          label={`${summary.stats.year} gifts`}
+          value={formatCadFromCents(summary.stats.yearGiftsCents)}
+        />
+        <Stat
+          label="Active monthly"
+          value={
+            summary.stats.activeMonthlyCents > 0
+              ? `${formatCadFromCents(summary.stats.activeMonthlyCents)} / month`
+              : 'None'
+          }
+        />
+      </div>
+
+      <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]">
+        <div className="hidden grid-cols-[1.1fr_0.8fr_0.9fr_1.2fr_1fr] gap-3 border-b border-white/10 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 md:grid">
+          <span>Date</span>
+          <span>Amount</span>
+          <span>Type</span>
+          <span>Campaign</span>
+          <span>Receipt</span>
+        </div>
+        <ul className="divide-y divide-white/10">
+          {summary.donations.length === 0 && (
+            <li className="px-5 py-8 text-sm text-white/50">No donations yet.</li>
+          )}
+          {summary.donations.map((d) => {
+            const date = new Date(d.transactionDate || d.createdAt).toLocaleDateString('en-CA', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            });
+            const receipt = summary.receipts.find((r) => r.donationId === d.id);
+            return (
+              <li
+                key={d.id}
+                className="grid gap-2 px-5 py-4 text-sm md:grid-cols-[1.1fr_0.8fr_0.9fr_1.2fr_1fr] md:items-center md:gap-3"
+              >
+                <span className="text-white/80">{date}</span>
+                <span className="font-semibold text-white">{formatCadFromCents(d.amountCents)}</span>
+                <span className="text-white/70">{d.frequency === 'MONTHLY' ? 'Monthly' : 'One-time'}</span>
+                <span className="text-white/70">{d.campaignName}</span>
+                <span>
+                  {receipt ? (
+                    <Link
+                      href={`/donor/receipts/${receipt.id}`}
+                      className="font-semibold text-[#f1328b] hover:underline"
+                    >
+                      View receipt
+                    </Link>
+                  ) : (
+                    <span className="text-white/40">Confirmation</span>
+                  )}
                 </span>
-              </div>
-              {receipt && (
-                <p className="mt-3 text-xs text-[#f1328b]">Receipt {receipt.receiptNumber}</p>
-              )}
-            </li>
-          );
-        })}
-        {mine.length === 0 && (
-          <li className="rounded-2xl border border-dashed border-white/15 px-5 py-10 text-center text-white/45">
-            No donations yet for this email.{' '}
-            <Link href="/donate" className="text-[#f1328b] hover:underline">
-              Make a gift
-            </Link>
-          </li>
-        )}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </PortalShell>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">{label}</p>
+      <p className="mt-2 text-2xl font-black text-white">{value}</p>
+    </div>
   );
 }

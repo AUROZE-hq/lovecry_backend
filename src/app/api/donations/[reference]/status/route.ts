@@ -29,11 +29,11 @@ export async function GET(_request: Request, { params }: Params) {
 /** Development-only helper. Impossible in production builds. */
 export async function POST(request: Request, { params }: Params) {
   const { reference } = await params;
-  const body = (await request.json().catch(() => ({}))) as { mockPay?: boolean };
+  const body = (await request.json().catch(() => ({}))) as { mockPay?: boolean; mockFail?: boolean };
 
-  if (!body.mockPay) {
+  if (!body.mockPay && !body.mockFail) {
     return NextResponse.json(
-      { error: 'Only mockPay is supported until Zeffy sync is enabled.' },
+      { error: 'Only mockPay/mockFail is supported until Zeffy sync is enabled.' },
       { status: 400 }
     );
   }
@@ -48,6 +48,15 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   try {
+    if (body.mockFail) {
+      const { markDonationFailed } = await import('@/lib/donations/service');
+      const donation = await markDonationFailed({ reference, reason: 'mock_declined' });
+      return NextResponse.json({
+        reference: donation.reference,
+        status: donation.status,
+      });
+    }
+
     const donation = await markDonationPaid({ reference });
     return NextResponse.json({
       reference: donation.reference,
@@ -56,7 +65,7 @@ export async function POST(request: Request, { params }: Params) {
       receiptNumber: donation.receiptNumber,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unable to mark paid';
+    const message = error instanceof Error ? error.message : 'Unable to update donation';
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

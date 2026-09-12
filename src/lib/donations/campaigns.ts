@@ -63,7 +63,7 @@ export const DEFAULT_CAMPAIGNS: DonationCampaign[] = [
   },
 ];
 
-export const SUGGESTED_AMOUNTS_CENTS = [2000, 2500, 5000, 10000, 25000] as const;
+export const SUGGESTED_AMOUNTS_CENTS = [2500, 5000, 10000, 25000] as const;
 export const RECOMMENDED_AMOUNT_CENTS = 5000;
 
 export function formatCadFromCents(cents: number): string {

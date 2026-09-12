@@ -2,12 +2,11 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { DONOR_COOKIE } from '@/lib/auth/donor-gate';
+import { revokeDonorSession, getAuthenticatedDonor } from '@/lib/auth/donor-gate';
 import { MEMBER_COOKIE } from '@/lib/auth/member-gate';
 import {
   cancelBooking,
   requestCounselling,
-  upsertDonorPreferences,
   upsertMemberProfile,
   getMemberProfile,
 } from '@/lib/members/store';
@@ -17,10 +16,10 @@ import {
   EventServiceError,
   registerForEvent as registerPublicEvent,
 } from '@/lib/events/service';
+import { prisma } from '@/lib/db/prisma';
 
 export async function logoutDonor() {
-  const jar = await cookies();
-  jar.delete(DONOR_COOKIE);
+  await revokeDonorSession();
   redirect('/donor');
 }
 
@@ -31,15 +30,18 @@ export async function logoutMember() {
 }
 
 export async function saveDonorPreferencesAction(formData: FormData) {
-  const jar = await cookies();
-  const email = jar.get(DONOR_COOKIE)?.value;
-  if (!email) redirect('/donor');
+  const donor = await getAuthenticatedDonor();
+  if (!donor) redirect('/donor');
 
-  upsertDonorPreferences(email, {
-    firstName: String(formData.get('firstName') || ''),
-    lastName: String(formData.get('lastName') || ''),
-    phone: String(formData.get('phone') || ''),
-    marketingConsent: formData.get('marketingConsent') === 'on',
+  await prisma.donor.update({
+    where: { id: donor.id },
+    data: {
+      firstName: String(formData.get('firstName') || ''),
+      lastName: String(formData.get('lastName') || ''),
+      phone: String(formData.get('phone') || '') || null,
+      marketingConsent: formData.get('marketingConsent') === 'on',
+      consentTimestamp: new Date(),
+    },
   });
   redirect('/donor/profile?saved=1');
 }

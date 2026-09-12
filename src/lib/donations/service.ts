@@ -2,9 +2,15 @@ import { DEFAULT_CAMPAIGNS } from './campaigns';
 import {
   addAudit,
   getDonationById,
+  getDonationByIdempotencyKey,
   getDonationByReference,
   getReceiptByDonationId,
   listDonations,
+  listDonationsForDonor,
+  listReceiptsForDonor,
+  listRecurringDonationsForDonor,
+  getReceiptForDonor,
+  getRecurringDonationForDonor,
   nextReceiptSequence,
   upsertDonation,
   upsertReceipt,
@@ -15,6 +21,8 @@ import { donationEnv } from '@/lib/config/env';
 import { sendDonationEmails } from '@/lib/email/send';
 import { generateReceiptArtifact } from '@/lib/receipts/generate-pdf';
 import { createHash } from 'crypto';
+import { prisma } from '@/lib/db/prisma';
+import { donorHasPortalAccount } from '@/lib/auth/donor-gate';
 
 function makeReference(): string {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -27,6 +35,11 @@ export async function createDonationIntent(input: CreateDonationIntentInput): Pr
     throw new Error('Privacy consent is required to donate.');
   }
 
+  if (input.idempotencyKey) {
+    const existing = await getDonationByIdempotencyKey(input.idempotencyKey);
+    if (existing) return existing;
+  }
+
   const campaign =
     DEFAULT_CAMPAIGNS.find((c) => c.slug === input.campaignSlug) ?? DEFAULT_CAMPAIGNS[0];
 
@@ -34,10 +47,11 @@ export async function createDonationIntent(input: CreateDonationIntentInput): Pr
   const donation: StoredDonation = {
     id: crypto.randomUUID(),
     reference: makeReference(),
+    idempotencyKey: input.idempotencyKey ?? null,
     zeffyTransactionId: null,
-    email: input.email ?? null,
-    firstName: input.firstName ?? null,
-    lastName: input.lastName ?? null,
+    email: input.email.toLowerCase(),
+    firstName: input.firstName,
+    lastName: input.lastName,
     amountCents: input.amountCents,
     eligibleReceiptAmountCents: input.amountCents,
     currency: 'CAD',
@@ -61,7 +75,16 @@ export async function createDonationIntent(input: CreateDonationIntentInput): Pr
     updatedAt: now,
   };
 
-  await upsertDonation(donation);
+  try {
+    await upsertDonation(donation);
+  } catch (err) {
+    if (input.idempotencyKey) {
+      const raced = await getDonationByIdempotencyKey(input.idempotencyKey);
+      if (raced) return raced;
+    }
+    throw err;
+  }
+
   await addAudit({
     action: 'DONATION_INTENT_CREATED',
     entityType: 'Donation',
@@ -123,7 +146,64 @@ export async function markDonationPaid(options: {
     await issueOfficialReceipt(donation);
   }
 
+  if (donation.frequency === 'MONTHLY' && donation.donorId) {
+    await ensureRecurringFromDonation(donation);
+  } else if (donation.frequency === 'MONTHLY') {
+    const refreshed = await getDonationById(donation.id);
+    if (refreshed?.donorId) await ensureRecurringFromDonation(refreshed);
+  }
+
   return (await getDonationById(donation.id))!;
+}
+
+export async function markDonationFailed(options: {
+  donationId?: string;
+  reference?: string;
+  reason?: string;
+}): Promise<StoredDonation> {
+  const donation =
+    (options.donationId && (await getDonationById(options.donationId))) ||
+    (options.reference && (await getDonationByReference(options.reference)));
+
+  if (!donation) throw new Error('Donation not found.');
+  if (donation.status === 'PAID') return donation;
+
+  donation.status = 'FAILED';
+  donation.updatedAt = new Date().toISOString();
+  await upsertDonation(donation);
+  await addAudit({
+    action: 'DONATION_MARKED_FAILED',
+    entityType: 'Donation',
+    entityId: donation.id,
+    detail: options.reason || 'payment_failed',
+  });
+  return donation;
+}
+
+async function ensureRecurringFromDonation(donation: StoredDonation): Promise<void> {
+  if (!donation.donorId) return;
+  const campaign = await prisma.campaign.findUnique({ where: { slug: donation.campaignSlug } });
+  const existing = await prisma.recurringDonation.findFirst({
+    where: { donorId: donation.donorId, status: 'ACTIVE', amountCents: donation.amountCents },
+  });
+  if (existing) return;
+
+  const next = new Date();
+  next.setMonth(next.getMonth() + 1);
+
+  await prisma.recurringDonation.create({
+    data: {
+      donorId: donation.donorId,
+      campaignId: campaign?.id || null,
+      amountCents: donation.amountCents,
+      currency: 'CAD',
+      frequency: 'MONTHLY',
+      status: 'ACTIVE',
+      paymentMethodMasked: 'Card ···· via Zeffy',
+      startedAt: new Date(),
+      nextExpectedPaymentAt: next,
+    },
+  });
 }
 
 async function issueOfficialReceipt(donation: StoredDonation): Promise<void> {
@@ -182,11 +262,63 @@ export async function getDonationStatus(reference: string) {
     isEligibleGift: donation.isEligibleGift,
   });
 
+  const portalExists = donation.email ? await donorHasPortalAccount(donation.email) : false;
+
   return {
     donation,
     receipt: (await getReceiptByDonationId(donation.id)) ?? null,
     eligibility,
+    portalExists,
   };
+}
+
+export async function getDonorPortalSummary(donorId: string) {
+  const donations = await listDonationsForDonor(donorId);
+  const paid = donations.filter((d) => d.status === 'PAID');
+  const year = new Date().getFullYear();
+  const totalGiven = paid.reduce((sum, d) => sum + d.amountCents, 0);
+  const yearGifts = paid
+    .filter((d) => (d.transactionDate || d.createdAt).startsWith(String(year)))
+    .reduce((sum, d) => sum + d.amountCents, 0);
+  const recurring = await listRecurringDonationsForDonor(donorId);
+  const activeMonthly = recurring
+    .filter((r) => r.status === 'ACTIVE')
+    .reduce((sum, r) => sum + r.amountCents, 0);
+
+  return {
+    donations: paid,
+    receipts: await listReceiptsForDonor(donorId),
+    recurring,
+    stats: {
+      totalGivenCents: totalGiven,
+      yearGiftsCents: yearGifts,
+      activeMonthlyCents: activeMonthly,
+      year,
+    },
+  };
+}
+
+export async function cancelRecurringDonationForDonor(
+  recurringId: string,
+  donorId: string
+): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  const row = await getRecurringDonationForDonor(recurringId, donorId);
+  if (!row) return { ok: false, error: 'Recurring gift not found.', status: 404 };
+  if (row.status !== 'ACTIVE') return { ok: false, error: 'This gift is already cancelled.', status: 400 };
+
+  await prisma.recurringDonation.update({
+    where: { id: row.id },
+    data: { status: 'CANCELLED', cancelledAt: new Date(), nextExpectedPaymentAt: null },
+  });
+
+  await addAudit({
+    action: 'RECURRING_CANCELLED',
+    entityType: 'RecurringDonation',
+    entityId: row.id,
+    detail: donorId,
+  });
+
+  return { ok: true };
 }
 
 export async function getAdminDonationStats() {
@@ -213,3 +345,11 @@ export async function getAdminDonationStats() {
 export function syncHash(payload: unknown): string {
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
+
+export {
+  listDonationsForDonor,
+  getReceiptForDonor,
+  listReceiptsForDonor,
+  listRecurringDonationsForDonor,
+  getRecurringDonationForDonor,
+};

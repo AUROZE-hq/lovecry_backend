@@ -1,5 +1,6 @@
+import nodemailer from 'nodemailer';
 import type { StoredDonation } from '@/lib/donations/types';
-import { donationEnv } from '@/lib/config/env';
+import { donationEnv, isResendConfigured, isSmtpConfigured } from '@/lib/config/env';
 import { formatCadFromCents } from '@/lib/donations/campaigns';
 import { renderDonationConfirmation } from '@/lib/email/templates';
 import { logInfo, logWarn } from '@/lib/security/logger';
@@ -26,63 +27,140 @@ export function listOutbox(): OutboundEmail[] {
   return [...outbox()];
 }
 
+function keepDevOutbox(email: OutboundEmail): EmailDeliveryStatus {
+  outbox().unshift(email);
+  return 'SKIPPED';
+}
+
+async function deliverViaSmtp(email: OutboundEmail): Promise<EmailDeliveryStatus> {
+  if (!isSmtpConfigured()) {
+    logWarn('email_smtp_not_configured', {
+      action: 'send',
+      errorCode: 'SMTP_NOT_CONFIGURED',
+      message: 'Set SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_FROM (or MAIL_FROM).',
+    });
+    if (donationEnv.appEnv !== 'production' && process.env.NODE_ENV !== 'production') {
+      return keepDevOutbox(email);
+    }
+    return 'FAILED';
+  }
+
+  if (donationEnv.email.dryRun) {
+    logInfo('email_dry_run', { action: 'send', status: 'SKIPPED', integration: 'smtp' });
+    return keepDevOutbox(email);
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: donationEnv.email.smtp.host,
+      port: donationEnv.email.smtp.port,
+      secure: donationEnv.email.smtp.secure,
+      auth: {
+        user: donationEnv.email.smtp.user,
+        pass: donationEnv.email.smtp.pass,
+      },
+    });
+
+    await transporter.sendMail({
+      from: donationEnv.email.from,
+      to: email.to,
+      replyTo: email.replyTo || donationEnv.email.replyTo || undefined,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+    });
+
+    logInfo('email_sent', { action: 'send', status: 'SENT', integration: 'smtp' });
+    return 'SENT';
+  } catch (err) {
+    logWarn('email_smtp_failed', {
+      action: 'send',
+      errorCode: 'SMTP_FAILED',
+      message: err instanceof Error ? err.message.slice(0, 300) : 'smtp_error',
+    });
+    if (donationEnv.appEnv !== 'production' && process.env.NODE_ENV !== 'production') {
+      return keepDevOutbox(email);
+    }
+    return 'FAILED';
+  }
+}
+
+async function deliverViaResend(email: OutboundEmail): Promise<EmailDeliveryStatus> {
+  if (!isResendConfigured()) {
+    logWarn('email_resend_not_configured', {
+      action: 'send',
+      errorCode: 'RESEND_NOT_CONFIGURED',
+    });
+    if (donationEnv.appEnv !== 'production' && process.env.NODE_ENV !== 'production') {
+      return keepDevOutbox(email);
+    }
+    return 'FAILED';
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${donationEnv.email.resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: donationEnv.email.from,
+        to: [email.to],
+        reply_to: email.replyTo || donationEnv.email.replyTo || undefined,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+      }),
+    });
+    if (!res.ok) {
+      const providerBody = await res.text().catch(() => '');
+      logWarn('email_send_failed', {
+        action: 'send',
+        status: res.status,
+        errorCode: 'RESEND_FAILED',
+        message: providerBody.slice(0, 300),
+      });
+      if (donationEnv.appEnv !== 'production' && process.env.NODE_ENV !== 'production') {
+        return keepDevOutbox(email);
+      }
+      return 'FAILED';
+    }
+    logInfo('email_sent', { action: 'send', status: 'SENT', integration: 'resend' });
+    return 'SENT';
+  } catch {
+    logWarn('email_send_exception', { action: 'send', errorCode: 'RESEND_EXCEPTION' });
+    return 'FAILED';
+  }
+}
+
 /**
- * Deliver email via Resend when configured.
- * Never reports SENT unless an external provider accepted the message.
+ * Deliver email via Gmail SMTP (default) or Resend.
+ * Never reports SENT unless an external provider accepted the message
+ * (except MAIL_DRY_RUN / local outbox fallbacks which return SKIPPED).
  */
 export async function deliverEmail(email: OutboundEmail): Promise<EmailDeliveryStatus> {
   if (!email.to) return 'SKIPPED';
 
-  const provider = (process.env.EMAIL_PROVIDER || 'resend').toLowerCase();
-  const apiKey = donationEnv.email.resendApiKey;
-  const from = donationEnv.email.from;
+  const provider = donationEnv.email.provider || 'smtp';
 
-  if (provider === 'resend' && apiKey && from) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from,
-          to: [email.to],
-          reply_to: email.replyTo || donationEnv.email.replyTo || undefined,
-          subject: email.subject,
-          html: email.html,
-          text: email.text,
-        }),
-      });
-      if (!res.ok) {
-        const providerBody = await res.text().catch(() => '');
-        logWarn('email_send_failed', {
-          action: 'send',
-          status: res.status,
-          errorCode: 'RESEND_FAILED',
-          message: providerBody.slice(0, 300),
-        });
-        // Local/dev: keep a copy in the outbox so flows remain testable when Resend rejects.
-        if (donationEnv.appEnv !== 'production' && process.env.NODE_ENV !== 'production') {
-          outbox().unshift(email);
-          return 'SKIPPED';
-        }
-        return 'FAILED';
-      }
-      logInfo('email_sent', { action: 'send', status: 'SENT', integration: 'resend' });
-      return 'SENT';
-    } catch {
-      logWarn('email_send_exception', { action: 'send', errorCode: 'RESEND_EXCEPTION' });
-      return 'FAILED';
-    }
+  if (provider === 'smtp' || provider === 'gmail') {
+    return deliverViaSmtp(email);
   }
 
-  // Dev/outbox only — not delivered externally
+  if (provider === 'resend') {
+    return deliverViaResend(email);
+  }
+
+  // Unknown provider — try SMTP then Resend
+  if (isSmtpConfigured()) return deliverViaSmtp(email);
+  if (isResendConfigured()) return deliverViaResend(email);
+
   outbox().unshift(email);
   logInfo('email_not_configured', {
     action: 'send',
     status: 'SKIPPED',
-    message: 'Resend not configured; message kept in local outbox and marked SKIPPED (not SENT).',
+    message: 'No email provider configured; message kept in local outbox.',
   });
   return 'SKIPPED';
 }

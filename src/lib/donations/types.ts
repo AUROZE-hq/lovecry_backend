@@ -1,20 +1,38 @@
 import { z } from 'zod';
 
-export const CreateDonationIntentSchema = z.object({
-  email: z.string().email().optional(),
-  firstName: z.string().min(1).max(80).optional(),
-  lastName: z.string().min(1).max(80).optional(),
-  amountCents: z.number().int().positive().max(10_000_000),
-  currency: z.literal('CAD').default('CAD'),
-  frequency: z.enum(['ONE_TIME', 'MONTHLY']),
-  campaignSlug: z.string().min(1),
-  isAnonymous: z.boolean().default(false),
-  dedicationType: z.enum(['NONE', 'IN_HONOUR', 'IN_MEMORY']).default('NONE'),
-  dedicationName: z.string().max(120).optional(),
-  donorMessage: z.string().max(2000).optional(),
-  marketingConsent: z.boolean().default(false),
-  privacyConsent: z.boolean(),
-});
+export const CreateDonationIntentSchema = z
+  .object({
+    email: z.string().trim().email('Enter a valid email address.'),
+    firstName: z.string().trim().min(1, 'First name is required.').max(80),
+    lastName: z.string().trim().min(1, 'Last name is required.').max(80),
+    amountCents: z.number().int().positive().max(10_000_000),
+    currency: z.literal('CAD').default('CAD'),
+    frequency: z.enum(['ONE_TIME', 'MONTHLY']),
+    campaignSlug: z.string().min(1),
+    isAnonymous: z.boolean().default(false),
+    dedicationType: z.enum(['NONE', 'IN_HONOUR', 'IN_MEMORY']).default('NONE'),
+    dedicationName: z.string().max(120).optional(),
+    donorMessage: z.string().max(2000).optional(),
+    marketingConsent: z.boolean().default(false),
+    privacyConsent: z.boolean(),
+    idempotencyKey: z.string().min(8).max(120).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.dedicationType !== 'NONE' && !val.dedicationName?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Enter the name for this dedication.',
+        path: ['dedicationName'],
+      });
+    }
+    if (!val.privacyConsent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Please accept the donation and privacy terms.',
+        path: ['privacyConsent'],
+      });
+    }
+  });
 
 export type CreateDonationIntentInput = z.infer<typeof CreateDonationIntentSchema>;
 
@@ -31,7 +49,9 @@ export type EmailRecordStatus = 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
 export interface StoredDonation {
   id: string;
   reference: string;
+  idempotencyKey?: string | null;
   zeffyTransactionId: string | null;
+  donorId?: string | null;
   email: string | null;
   firstName: string | null;
   lastName: string | null;

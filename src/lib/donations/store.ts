@@ -15,6 +15,98 @@ export async function listDonations(): Promise<StoredDonation[]> {
   return rows.map(mapDonation);
 }
 
+/** Owner-scoped: never call from the browser with a client-supplied donorId. */
+export async function listDonationsForDonor(donorId: string): Promise<StoredDonation[]> {
+  await ensureCampaignSeed();
+  const rows = await prisma.donation.findMany({
+    where: { donorId, status: { in: ['PAID', 'REFUNDED'] } },
+    include: { donor: true, campaign: true, receipt: true },
+    orderBy: [{ transactionDate: 'desc' }, { createdAt: 'desc' }],
+  });
+  return rows.map(mapDonation);
+}
+
+export async function getDonationForDonor(
+  donationId: string,
+  donorId: string
+): Promise<StoredDonation | undefined> {
+  const row = await prisma.donation.findFirst({
+    where: { id: donationId, donorId },
+    include: { donor: true, campaign: true, receipt: true },
+  });
+  return row ? mapDonation(row) : undefined;
+}
+
+export async function getReceiptForDonor(
+  receiptId: string,
+  donorId: string
+): Promise<(StoredReceipt & { donation: StoredDonation }) | undefined> {
+  const row = await prisma.donationReceipt.findFirst({
+    where: { id: receiptId, donation: { donorId } },
+    include: {
+      donation: { include: { donor: true, campaign: true, receipt: true } },
+    },
+  });
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    donationId: row.donationId,
+    receiptNumber: row.receiptNumber,
+    type: row.receiptType,
+    status: row.status,
+    eligibleAmountCents: row.eligibleAmountCents,
+    issuedAt: row.issuedAt?.toISOString() ?? null,
+    emailedAt: row.emailedAt?.toISOString() ?? null,
+    pdfPath: row.pdfStorageKey,
+    checksum: row.checksum,
+    donation: mapDonation(row.donation),
+  };
+}
+
+export async function listReceiptsForDonor(donorId: string): Promise<StoredReceipt[]> {
+  const rows = await prisma.donationReceipt.findMany({
+    where: { donation: { donorId } },
+    orderBy: { createdAt: 'desc' },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    donationId: r.donationId,
+    receiptNumber: r.receiptNumber,
+    type: r.receiptType,
+    status: r.status,
+    eligibleAmountCents: r.eligibleAmountCents,
+    issuedAt: r.issuedAt?.toISOString() ?? null,
+    emailedAt: r.emailedAt?.toISOString() ?? null,
+    pdfPath: r.pdfStorageKey,
+    checksum: r.checksum,
+  }));
+}
+
+export async function listRecurringDonationsForDonor(donorId: string) {
+  return prisma.recurringDonation.findMany({
+    where: { donorId },
+    include: { campaign: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function getRecurringDonationForDonor(recurringId: string, donorId: string) {
+  return prisma.recurringDonation.findFirst({
+    where: { id: recurringId, donorId },
+    include: { campaign: true },
+  });
+}
+
+export async function getDonationByIdempotencyKey(
+  key: string
+): Promise<StoredDonation | undefined> {
+  const row = await prisma.donation.findUnique({
+    where: { idempotencyKey: key },
+    include: { donor: true, campaign: true, receipt: true },
+  });
+  return row ? mapDonation(row) : undefined;
+}
+
 export async function getDonationById(id: string): Promise<StoredDonation | undefined> {
   const row = await prisma.donation.findUnique({
     where: { id },
@@ -76,6 +168,7 @@ export async function upsertDonation(donation: StoredDonation): Promise<StoredDo
     create: {
       id: donation.id,
       localReference: donation.reference,
+      idempotencyKey: donation.idempotencyKey || null,
       zeffyTransactionId: donation.zeffyTransactionId,
       donorId,
       campaignId: campaign?.id,
@@ -97,6 +190,7 @@ export async function upsertDonation(donation: StoredDonation): Promise<StoredDo
     },
     update: {
       localReference: donation.reference,
+      idempotencyKey: donation.idempotencyKey || undefined,
       zeffyTransactionId: donation.zeffyTransactionId,
       donorId,
       campaignId: campaign?.id,
@@ -243,7 +337,9 @@ export async function listAudits(limit = 50): Promise<AuditEntry[]> {
 type DonationRow = {
   id: string;
   localReference: string | null;
+  idempotencyKey?: string | null;
   zeffyTransactionId: string | null;
+  donorId?: string | null;
   amountCents: number;
   eligibleReceiptAmountCents: number;
   frequency: StoredDonation['frequency'];
@@ -276,7 +372,9 @@ function mapDonation(row: DonationRow): StoredDonation {
   return {
     id: row.id,
     reference: row.localReference || meta.reference || row.zeffyTransactionId || row.id,
+    idempotencyKey: row.idempotencyKey ?? null,
     zeffyTransactionId: row.zeffyTransactionId,
+    donorId: row.donorId ?? null,
     email: row.donor?.email ?? null,
     firstName: row.donor?.firstName ?? null,
     lastName: row.donor?.lastName ?? null,

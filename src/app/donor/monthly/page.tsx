@@ -1,71 +1,77 @@
-import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { DONOR_COOKIE } from '@/lib/auth/donor-gate';
-import { listDonations } from '@/lib/donations/store';
+import { getAuthenticatedDonor } from '@/lib/auth/donor-gate';
+import { getDonorPortalSummary } from '@/lib/donations/service';
 import { formatCadFromCents } from '@/lib/donations/campaigns';
-import PortalShell from '@/components/portals/PortalShell';
+import PortalShell, { DONOR_PORTAL_NAV } from '@/components/portals/PortalShell';
 import { logoutDonor } from '@/app/portals/actions';
+import CancelMonthlyButton from '@/components/donor/CancelMonthlyButton';
 
-const nav = [
-  { href: '/donor/donations', label: 'History' },
-  { href: '/donor/monthly', label: 'Monthly giving' },
-  { href: '/donor/receipts', label: 'Receipts' },
-  { href: '/donor/profile', label: 'Profile' },
-];
-
-export const metadata = { title: 'Monthly Giving | LoveCry' };
+export const metadata = { title: 'Monthly Giving | LoveCry Donor Portal' };
 
 export default async function DonorMonthlyPage() {
-  const email = (await cookies()).get(DONOR_COOKIE)?.value;
-  if (!email) redirect('/donor');
-
-  const monthly = (await listDonations()).filter(
-    (d) => d.email?.toLowerCase() === email.toLowerCase() && d.frequency === 'MONTHLY'
-  );
+  const donor = await getAuthenticatedDonor();
+  if (!donor) redirect('/donor');
+  const summary = await getDonorPortalSummary(donor.id);
+  const name = [donor.firstName, donor.lastName].filter(Boolean).join(' ') || 'Donor';
+  const active = summary.recurring.filter((r) => r.status === 'ACTIVE');
 
   return (
     <PortalShell
-      title="Monthly giving"
-      subtitle="Donor Portal"
-      email={email}
-      nav={nav}
+      title="Monthly Giving"
+      subtitle="Manage your recurring LoveCry gifts."
+      email={donor.email}
+      displayName={name}
+      nav={DONOR_PORTAL_NAV}
+      activeHref="/donor/monthly"
       logoutAction={logoutDonor}
     >
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm text-white/65">
-        <p>
-          Track your recurring gifts here. When Zeffy is connected tomorrow, cancel/update links will
-          point to the secure payment provider — LoveCry never stores card numbers.
-        </p>
-      </div>
-
-      <ul className="mt-6 space-y-3">
-        {monthly.map((d) => (
-          <li key={d.id} className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4">
-            <p className="font-semibold">
-              {formatCadFromCents(d.amountCents)} / month · {d.campaignName}
-            </p>
-            <p className="mt-1 text-xs text-white/40">
-              Status: {d.status} · Started {new Date(d.createdAt).toLocaleDateString()}
-            </p>
-            <p className="mt-3 text-xs text-white/50">
-              To change or cancel: contact{' '}
-              <a href="mailto:jwilson@lovecry.ca" className="text-[#f1328b]">
-                jwilson@lovecry.ca
-              </a>{' '}
-              or use Zeffy&apos;s donor tools once live.
-            </p>
-          </li>
-        ))}
-        {monthly.length === 0 && (
-          <li className="text-white/45">
-            No monthly gifts yet.{' '}
-            <Link href="/donate" className="text-[#f1328b] hover:underline">
-              Start one
-            </Link>
-          </li>
-        )}
-      </ul>
+      {active.length === 0 ? (
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/55">
+          You have no active monthly gifts.{' '}
+          <a href="/donate" className="font-semibold text-[#f1328b] hover:underline">
+            Start a monthly gift
+          </a>
+        </div>
+      ) : (
+        <ul className="space-y-4">
+          {active.map((r) => (
+            <li key={r.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <p className="text-2xl font-black text-white">
+                {formatCadFromCents(r.amountCents)}
+                <span className="text-base font-semibold text-white/50"> / month</span>
+              </p>
+              <p className="mt-2 text-sm text-white/60">
+                {r.campaign?.name || 'Where Needed Most'}
+              </p>
+              <p className="mt-1 text-sm text-white/45">
+                Next gift:{' '}
+                {r.nextExpectedPaymentAt
+                  ? new Date(r.nextExpectedPaymentAt).toLocaleDateString('en-CA', {
+                      dateStyle: 'medium',
+                    })
+                  : '—'}
+              </p>
+              <p className="mt-1 text-sm text-white/45">
+                Payment method: {r.paymentMethodMasked || 'Card via Zeffy'}
+              </p>
+              <div className="mt-5">
+                <CancelMonthlyButton
+                  recurringId={r.id}
+                  amountLabel={formatCadFromCents(r.amountCents)}
+                  campaignName={r.campaign?.name || 'Where Needed Most'}
+                  nextDate={
+                    r.nextExpectedPaymentAt
+                      ? new Date(r.nextExpectedPaymentAt).toLocaleDateString('en-CA', {
+                          dateStyle: 'medium',
+                        })
+                      : '—'
+                  }
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </PortalShell>
   );
 }

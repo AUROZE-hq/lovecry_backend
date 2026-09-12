@@ -52,11 +52,33 @@ export const donationEnv = {
   },
 
   email: {
-    from: process.env.EMAIL_FROM || '',
+    from: process.env.EMAIL_FROM || process.env.MAIL_FROM || '',
     replyTo: process.env.EMAIL_REPLY_TO || '',
     resendApiKey: process.env.RESEND_API_KEY || '',
+    provider: (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase(),
+    smtp: {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: readInt(process.env.SMTP_PORT, 587),
+      secure: readBoolean(process.env.SMTP_SECURE, false),
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+    },
+    dryRun: readBoolean(process.env.MAIL_DRY_RUN, false),
   },
 } as const;
+
+export function isSmtpConfigured(): boolean {
+  return Boolean(
+    donationEnv.email.smtp.host &&
+      donationEnv.email.smtp.user &&
+      donationEnv.email.smtp.pass &&
+      donationEnv.email.from
+  );
+}
+
+export function isResendConfigured(): boolean {
+  return Boolean(donationEnv.email.resendApiKey && donationEnv.email.from);
+}
 
 export function isZeffyConfigured(): boolean {
   return Boolean(
