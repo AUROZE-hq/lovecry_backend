@@ -51,10 +51,14 @@ async function seedOnce(): Promise<void> {
       maxAppointmentsPerDay: 8,
       inPersonLocation:
         counsellingEnv.inPersonLocation ||
-        'In-person location to be confirmed with LoveCry staff',
+        'LoveCry office (150, Cosburn Ave, East York, ON M4J 2L9)',
       crisisMessage: crisis,
     },
-    update: {},
+    update: {
+      inPersonLocation:
+        counsellingEnv.inPersonLocation ||
+        'LoveCry office (150, Cosburn Ave, East York, ON M4J 2L9)',
+    },
   });
 
   const counsellor = await prisma.counsellor.upsert({
