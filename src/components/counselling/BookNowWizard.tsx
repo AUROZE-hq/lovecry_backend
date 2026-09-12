@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import BookingConfirmation from './booking/BookingConfirmation';
 import BookingDetails from './booking/BookingDetails';
 import BookingSchedule from './booking/BookingSchedule';
@@ -36,6 +37,8 @@ function digitCount(value: string): number {
 }
 
 export default function BookNowWizard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [screen, setScreen] = useState<BookingScreen>('SCHEDULE');
   const [boot, setBoot] = useState<BookingBootstrap | null>(null);
   const [service, setService] = useState<BookingService | null>(null);
@@ -76,6 +79,12 @@ export default function BookNowWizard() {
   const [acks, setAcks] = useState<Record<string, boolean>>({});
   const [now, setNow] = useState(() => Date.now());
   const selectedDateRef = useRef('');
+
+  useEffect(() => {
+    if (searchParams.get('privacyAccepted') !== '1') return;
+    setTermsAccepted(true);
+    router.replace('/book-now', { scroll: false });
+  }, [router, searchParams]);
 
   const loadDates = useCallback(async (autoSelect: boolean) => {
     setDatesLoading(true);

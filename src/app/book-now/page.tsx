@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import BookNowWizard from '@/components/counselling/BookNowWizard';
 
 export const metadata = {
@@ -6,5 +7,15 @@ export const metadata = {
 };
 
 export default function BookNowPage() {
-  return <BookNowWizard />;
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#050505] px-4 pt-[calc(var(--site-header-height)+2rem)] text-white/55">
+          Loading booking…
+        </main>
+      }
+    >
+      <BookNowWizard />
+    </Suspense>
+  );
 }

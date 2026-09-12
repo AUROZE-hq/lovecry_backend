@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   counsellorNameWithoutCredentials,
   formatClockTime,
@@ -252,9 +253,27 @@ export default function BookingDetails({
                     )}
                   </span>
                   <span className="text-sm text-white">
-                    <span className="lg:hidden">I agree to counselling consent and privacy terms.</span>
+                    <span className="lg:hidden">
+                      I agree to counselling consent and{' '}
+                      <Link
+                        href="/privacy-terms?returnTo=/book-now"
+                        onClick={(event) => event.stopPropagation()}
+                        className="font-semibold text-[#60a5fa] underline underline-offset-2 hover:text-[#93c5fd]"
+                      >
+                        privacy terms
+                      </Link>
+                      .
+                    </span>
                     <span className="hidden lg:inline">
-                      I agree to LoveCry’s counselling consent and privacy terms.
+                      I agree to LoveCry&apos;s counselling consent and{' '}
+                      <Link
+                        href="/privacy-terms?returnTo=/book-now"
+                        onClick={(event) => event.stopPropagation()}
+                        className="font-semibold text-[#60a5fa] underline underline-offset-2 hover:text-[#93c5fd]"
+                      >
+                        privacy terms
+                      </Link>
+                      .
                     </span>
                   </span>
                 </button>
